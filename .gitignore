@@ -1,0 +1,174 @@
+# =============================================================================
+# Elixir / Mix
+# =============================================================================
+/_build/
+/deps/
+/*.ez
+erl_crash.dump
+*.beam
+
+# =============================================================================
+# Phoenix / Assets
+# =============================================================================
+/apps/syncflow_web/assets/node_modules/
+/apps/syncflow_web/priv/static/assets/
+/apps/syncflow_web/priv/static/cache_manifest.json
+
+# =============================================================================
+# Database / Ecto
+# =============================================================================
+*.sqlite3
+*.sqlite3-journal
+*.sqlite3-shm
+*.sqlite3-wal
+
+# =============================================================================
+# Environment & Secrets — NEVER commit these
+# =============================================================================
+.env
+.env.local
+.env.*.local
+.env.production
+.env.staging
+*.secret.exs
+/config/prod.secret.exs
+/config/releases.exs
+priv/cert/
+*.pem
+*.key
+*.p12
+*.pfx
+
+# =============================================================================
+# Uploads & Generated Files
+# =============================================================================
+/priv/uploads/
+/priv/static/uploads/
+/apps/*/priv/uploads/
+
+# =============================================================================
+# Test & Coverage
+# =============================================================================
+/cover/
+/apps/*/cover/
+.coverdata
+
+# =============================================================================
+# Release artifacts
+# =============================================================================
+/rel/
+/releases/
+
+# =============================================================================
+# Logs
+# =============================================================================
+*.log
+/log/
+/logs/
+
+# =============================================================================
+# OS Files
+# =============================================================================
+
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Icon?
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+.nfs*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# =============================================================================
+# Editors & IDEs
+# =============================================================================
+
+# VS Code
+.vscode/
+!.vscode/extensions.json
+
+# JetBrains (IntelliJ, Rider, etc.)
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+.idea_modules/
+
+# Vim / Neovim
+*.swp
+*.swo
+*.swn
+Session.vim
+.netrwhist
+tags
+.tags
+
+# Emacs
+*~
+\#*\#
+.\#*
+*.elc
+auto-save-list
+tramp
+.org-id-locations
+*_archive
+*_flymake.*
+/eshell/history
+/eshell/lastdir
+/elpa/
+*.rel
+
+# Sublime Text
+*.tmlanguage.cache
+*.tmPreferences.cache
+*.stTheme.cache
+*.sublime-workspace
+*.sublime-project
+
+# Atom
+.atom/
+
+# Elixir Language Server
+.elixir_ls/
+
+# =============================================================================
+# Docker (local overrides only)
+# =============================================================================
+docker-compose.override.yml
+docker-compose.local.yml
+
+# =============================================================================
+# Miscellaneous
+# =============================================================================
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.orig
+*.backup
+
+# Archive files
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+*.rar
+*.7z
+
+# Compiled assets / minified (generated, not source)
+*.min.js
+*.min.css
