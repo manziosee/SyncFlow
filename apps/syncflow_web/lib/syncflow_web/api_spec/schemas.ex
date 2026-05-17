@@ -13,53 +13,77 @@ defmodule SyncFlow.Web.ApiSpec.Schemas do
 
   def all do
     %{
+      # Auth
       "LoginRequest" => login_request(),
       "LoginResponse" => login_response(),
       "RegisterRequest" => register_request(),
+      "RefreshRequest" => refresh_request(),
       "UserProfile" => user_profile(),
 
+      # Accounting
       "Invoice" => invoice_schema(),
       "InvoiceLine" => invoice_line(),
       "CreateInvoiceRequest" => create_invoice_request(),
+      "RejectInvoiceRequest" => reject_invoice_request(),
       "InvoiceStats" => invoice_stats(),
+      "RevenueByMonth" => revenue_by_month(),
 
+      # Inventory
       "Warehouse" => warehouse_schema(),
       "CreateWarehouseRequest" => create_warehouse_request(),
-
       "StockItem" => stock_item_schema(),
       "CreateStockItemRequest" => create_stock_item_request(),
       "AdjustStockRequest" => adjust_stock_request(),
       "TransferStockRequest" => transfer_stock_request(),
+      "InventoryValue" => inventory_value_schema(),
 
+      # HR
       "Employee" => employee_schema(),
       "CreateEmployeeRequest" => create_employee_request(),
-
       "PayrollRun" => payroll_run_schema(),
       "CreatePayrollRunRequest" => create_payroll_run_request(),
+      "PaySlip" => pay_slip_schema(),
+      "PaySlipList" => pay_slip_list(),
+      "HeadcountResponse" => headcount_response(),
 
+      # CRM
       "Customer" => customer_schema(),
       "CreateCustomerRequest" => create_customer_request(),
       "RecordInteractionRequest" => record_interaction_request(),
       "Interaction" => interaction_schema(),
+      "CustomerStats" => customer_stats_schema(),
 
+      # Fleet
       "Vehicle" => vehicle_schema(),
       "CreateVehicleRequest" => create_vehicle_request(),
       "AssignDriverRequest" => assign_driver_request(),
-
       "Trip" => trip_schema(),
       "FuelLogRequest" => fuel_log_request(),
-
+      "FuelRecord" => fuel_record_schema(),
       "LiveVehiclePosition" => live_vehicle_position(),
+      "LiveVehiclePositionList" => live_vehicle_position_list(),
+      "FleetSummary" => fleet_summary_schema(),
 
+      # Dashboard
+      "CEODashboard" => ceo_dashboard_schema(),
+      "WarehouseDashboard" => warehouse_dashboard_schema(),
+      "RegionalDashboard" => regional_dashboard_schema(),
+
+      # Reports
+      "GenerateReportRequest" => generate_report_request(),
+      "ReportEnqueuedResponse" => report_enqueued_response(),
+
+      # AI
       "AICommandRequest" => ai_command_request(),
       "AICommandResponse" => ai_command_response(),
 
+      # Generic
       "ErrorResponse" => error_response(),
       "PaginatedResponse" => paginated_response()
     }
   end
 
-  # --- Auth schemas ---
+  # --- Auth ---
 
   def login_request do
     %Schema{
@@ -69,6 +93,17 @@ defmodule SyncFlow.Web.ApiSpec.Schemas do
       properties: %{
         email: %Schema{type: :string, format: :email, example: "finance@company.rw"},
         password: %Schema{type: :string, minLength: 8, example: "secret123"}
+      }
+    }
+  end
+
+  def refresh_request do
+    %Schema{
+      title: "RefreshRequest",
+      type: :object,
+      required: [:refresh_token],
+      properties: %{
+        refresh_token: %Schema{type: :string}
       }
     }
   end
@@ -122,7 +157,7 @@ defmodule SyncFlow.Web.ApiSpec.Schemas do
     }
   end
 
-  # --- Invoice schemas ---
+  # --- Invoice ---
 
   def invoice_schema do
     %Schema{
@@ -181,6 +216,16 @@ defmodule SyncFlow.Web.ApiSpec.Schemas do
     }
   end
 
+  def reject_invoice_request do
+    %Schema{
+      title: "RejectInvoiceRequest",
+      type: :object,
+      properties: %{
+        reason: %Schema{type: :string, example: "Missing supporting documents"}
+      }
+    }
+  end
+
   def invoice_stats do
     %Schema{
       title: "InvoiceStats",
@@ -200,7 +245,27 @@ defmodule SyncFlow.Web.ApiSpec.Schemas do
     }
   end
 
-  # --- Warehouse schemas ---
+  def revenue_by_month do
+    %Schema{
+      title: "RevenueByMonth",
+      type: :object,
+      properties: %{
+        year: %Schema{type: :integer, example: 2024},
+        data: %Schema{
+          type: :array,
+          items: %Schema{
+            type: :object,
+            properties: %{
+              month: %Schema{type: :integer, example: 3},
+              total: decimal_schema("15000000.00")
+            }
+          }
+        }
+      }
+    }
+  end
+
+  # --- Warehouse ---
 
   def warehouse_schema do
     %Schema{
@@ -236,7 +301,26 @@ defmodule SyncFlow.Web.ApiSpec.Schemas do
     }
   end
 
-  # --- Stock Item schemas ---
+  def inventory_value_schema do
+    %Schema{
+      title: "InventoryValue",
+      type: :object,
+      properties: %{
+        data: %Schema{
+          type: :object,
+          properties: %{
+            total_items: %Schema{type: :integer, example: 1250},
+            total_value: decimal_schema("187500000.00"),
+            currency: %Schema{type: :string, example: "RWF"},
+            low_stock_count: %Schema{type: :integer, example: 12},
+            snapshot_at: %Schema{type: :string, format: :"date-time"}
+          }
+        }
+      }
+    }
+  end
+
+  # --- Stock Item ---
 
   def stock_item_schema do
     %Schema{
@@ -309,7 +393,7 @@ defmodule SyncFlow.Web.ApiSpec.Schemas do
     }
   end
 
-  # --- HR schemas ---
+  # --- HR ---
 
   def employee_schema do
     %Schema{
@@ -365,7 +449,10 @@ defmodule SyncFlow.Web.ApiSpec.Schemas do
         total_gross: decimal_schema("12000000"),
         total_deductions: decimal_schema("1500000"),
         total_net: decimal_schema("10500000"),
-        currency: %Schema{type: :string}
+        currency: %Schema{type: :string},
+        processed_by: %Schema{type: :string, nullable: true},
+        approved_by: %Schema{type: :string, nullable: true},
+        paid_at: %Schema{type: :string, format: :"date-time", nullable: true}
       }
     }
   end
@@ -384,7 +471,58 @@ defmodule SyncFlow.Web.ApiSpec.Schemas do
     }
   end
 
-  # --- CRM schemas ---
+  def pay_slip_schema do
+    %Schema{
+      title: "PaySlip",
+      type: :object,
+      properties: %{
+        id: uuid_schema(),
+        payroll_run_id: uuid_schema(),
+        employee_id: uuid_schema(),
+        employee_name: %Schema{type: :string, example: "Amina Uwimana"},
+        gross_salary: decimal_schema("300000"),
+        tax_amount: decimal_schema("68000"),
+        deductions: decimal_schema("68000"),
+        net_salary: decimal_schema("232000"),
+        currency: %Schema{type: :string, example: "RWF"},
+        status: %Schema{type: :string, enum: ~w(pending paid)}
+      }
+    }
+  end
+
+  def pay_slip_list do
+    %Schema{
+      title: "PaySlipList",
+      type: :object,
+      properties: %{
+        data: %Schema{type: :array, items: pay_slip_schema()},
+        run: payroll_run_schema(),
+        count: %Schema{type: :integer}
+      }
+    }
+  end
+
+  def headcount_response do
+    %Schema{
+      title: "HeadcountResponse",
+      type: :object,
+      properties: %{
+        data: %Schema{
+          type: :object,
+          properties: %{
+            by_department: %Schema{
+              type: :object,
+              additionalProperties: %Schema{type: :integer},
+              example: %{"Finance" => 8, "Operations" => 12, "Sales" => 6}
+            },
+            total_active: %Schema{type: :integer, example: 26}
+          }
+        }
+      }
+    }
+  end
+
+  # --- CRM ---
 
   def customer_schema do
     %Schema{
@@ -441,7 +579,7 @@ defmodule SyncFlow.Web.ApiSpec.Schemas do
       properties: %{
         id: uuid_schema(),
         customer_id: uuid_schema(),
-        type: %Schema{type: :string},
+        type: %Schema{type: :string, enum: ~w(call email meeting visit note)},
         notes: %Schema{type: :string},
         outcome: %Schema{type: :string, nullable: true},
         recorded_by: uuid_schema(),
@@ -450,7 +588,25 @@ defmodule SyncFlow.Web.ApiSpec.Schemas do
     }
   end
 
-  # --- Fleet schemas ---
+  def customer_stats_schema do
+    %Schema{
+      title: "CustomerStats",
+      type: :object,
+      properties: %{
+        data: %Schema{
+          type: :object,
+          properties: %{
+            active: %Schema{type: :integer, example: 142},
+            inactive: %Schema{type: :integer, example: 18},
+            blocked: %Schema{type: :integer, example: 3},
+            total: %Schema{type: :integer, example: 163}
+          }
+        }
+      }
+    }
+  end
+
+  # --- Fleet ---
 
   def vehicle_schema do
     %Schema{
@@ -537,6 +693,25 @@ defmodule SyncFlow.Web.ApiSpec.Schemas do
     }
   end
 
+  def fuel_record_schema do
+    %Schema{
+      title: "FuelRecord",
+      type: :object,
+      properties: %{
+        id: uuid_schema(),
+        vehicle_id: uuid_schema(),
+        liters: %Schema{type: :number},
+        cost_per_liter: %Schema{type: :number, nullable: true},
+        total_cost: %Schema{type: :number},
+        currency: %Schema{type: :string},
+        station: %Schema{type: :string, nullable: true},
+        odometer: %Schema{type: :integer, nullable: true},
+        logged_by: uuid_schema(),
+        logged_at: %Schema{type: :string, format: :"date-time"}
+      }
+    }
+  end
+
   def live_vehicle_position do
     %Schema{
       title: "LiveVehiclePosition",
@@ -552,7 +727,222 @@ defmodule SyncFlow.Web.ApiSpec.Schemas do
     }
   end
 
-  # --- AI schema ---
+  def live_vehicle_position_list do
+    %Schema{
+      title: "LiveVehiclePositionList",
+      type: :object,
+      properties: %{
+        data: %Schema{type: :array, items: live_vehicle_position()},
+        count: %Schema{type: :integer}
+      }
+    }
+  end
+
+  def fleet_summary_schema do
+    %Schema{
+      title: "FleetSummary",
+      type: :object,
+      properties: %{
+        data: %Schema{
+          type: :object,
+          properties: %{
+            by_status: %Schema{
+              type: :object,
+              additionalProperties: %Schema{type: :integer},
+              example: %{"available" => 8, "on_trip" => 5, "maintenance" => 2, "inactive" => 1}
+            },
+            total_vehicles: %Schema{type: :integer, example: 16},
+            active_on_gps: %Schema{type: :integer, example: 5},
+            total_fuel_cost: decimal_schema("1250000.00"),
+            fuel_cost_by_vehicle: %Schema{
+              type: :array,
+              items: %Schema{
+                type: :object,
+                properties: %{
+                  vehicle_id: uuid_schema(),
+                  plate_number: %Schema{type: :string},
+                  total_liters: %Schema{type: :number},
+                  total_cost: decimal_schema()
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  end
+
+  # --- Dashboards ---
+
+  def ceo_dashboard_schema do
+    %Schema{
+      title: "CEODashboard",
+      type: :object,
+      properties: %{
+        data: %Schema{
+          type: :object,
+          properties: %{
+            year: %Schema{type: :integer},
+            invoices: %Schema{
+              type: :object,
+              properties: %{
+                stats: %Schema{type: :object},
+                overdue_count: %Schema{type: :integer},
+                overdue_total: decimal_schema()
+              }
+            },
+            inventory: %Schema{
+              type: :object,
+              properties: %{
+                total_items: %Schema{type: :integer},
+                total_value: decimal_schema(),
+                low_stock_count: %Schema{type: :integer}
+              }
+            },
+            fleet: %Schema{
+              type: :object,
+              properties: %{
+                by_status: %Schema{type: :object},
+                total: %Schema{type: :integer},
+                active_on_gps: %Schema{type: :integer}
+              }
+            },
+            hr: %Schema{
+              type: :object,
+              properties: %{
+                headcount_by_department: %Schema{type: :object},
+                total_active: %Schema{type: :integer}
+              }
+            },
+            customers: %Schema{type: :object},
+            revenue_by_month: %Schema{
+              type: :array,
+              items: %Schema{
+                type: :object,
+                properties: %{
+                  month: %Schema{type: :integer},
+                  total: decimal_schema()
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  end
+
+  def warehouse_dashboard_schema do
+    %Schema{
+      title: "WarehouseDashboard",
+      type: :object,
+      properties: %{
+        data: %Schema{
+          type: :object,
+          properties: %{
+            warehouses: %Schema{
+              type: :array,
+              items: %Schema{
+                type: :object,
+                properties: %{
+                  id: uuid_schema(),
+                  name: %Schema{type: :string},
+                  code: %Schema{type: :string},
+                  total_items: %Schema{type: :integer},
+                  low_stock_count: %Schema{type: :integer}
+                }
+              }
+            },
+            totals: %Schema{
+              type: :object,
+              properties: %{
+                total_warehouses: %Schema{type: :integer},
+                total_items: %Schema{type: :integer},
+                total_value: decimal_schema(),
+                low_stock_count: %Schema{type: :integer},
+                pending_transfers: %Schema{type: :integer}
+              }
+            },
+            low_stock_items: %Schema{type: :array, items: stock_item_schema()}
+          }
+        }
+      }
+    }
+  end
+
+  def regional_dashboard_schema do
+    %Schema{
+      title: "RegionalDashboard",
+      type: :object,
+      properties: %{
+        data: %Schema{
+          type: :object,
+          properties: %{
+            regions: %Schema{
+              type: :array,
+              items: %Schema{
+                type: :object,
+                properties: %{
+                  warehouse_id: uuid_schema(),
+                  warehouse_name: %Schema{type: :string},
+                  code: %Schema{type: :string},
+                  latitude: %Schema{type: :number, nullable: true},
+                  longitude: %Schema{type: :number, nullable: true},
+                  stock: %Schema{
+                    type: :object,
+                    properties: %{
+                      total_items: %Schema{type: :integer},
+                      low_stock_count: %Schema{type: :integer},
+                      total_value: decimal_schema()
+                    }
+                  }
+                }
+              }
+            },
+            total_regions: %Schema{type: :integer},
+            snapshot_at: %Schema{type: :string, format: :"date-time"}
+          }
+        }
+      }
+    }
+  end
+
+  # --- Reports ---
+
+  def generate_report_request do
+    %Schema{
+      title: "GenerateReportRequest",
+      type: :object,
+      required: [:type],
+      properties: %{
+        type: %Schema{
+          type: :string,
+          enum: ~w(monthly_revenue inventory_audit payroll_summary fleet_utilization overdue_invoices),
+          example: "monthly_revenue"
+        },
+        year: %Schema{type: :integer, example: 2024, description: "Required for monthly_revenue report"}
+      }
+    }
+  end
+
+  def report_enqueued_response do
+    %Schema{
+      title: "ReportEnqueuedResponse",
+      type: :object,
+      properties: %{
+        data: %Schema{
+          type: :object,
+          properties: %{
+            job_id: %Schema{type: :integer},
+            type: %Schema{type: :string},
+            status: %Schema{type: :string, example: "queued"}
+          }
+        },
+        message: %Schema{type: :string}
+      }
+    }
+  end
+
+  # --- AI ---
 
   def ai_command_request do
     %Schema{
@@ -574,7 +964,8 @@ defmodule SyncFlow.Web.ApiSpec.Schemas do
       type: :object,
       properties: %{
         data: %Schema{type: :object},
-        message: %Schema{type: :string, example: "Invoice created for BK Group"}
+        message: %Schema{type: :string, example: "Invoice created for BK Group"},
+        count: %Schema{type: :integer, nullable: true}
       }
     }
   end

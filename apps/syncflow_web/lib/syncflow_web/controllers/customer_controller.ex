@@ -1,8 +1,83 @@
 defmodule SyncFlow.Web.Controllers.CustomerController do
   use Phoenix.Controller, formats: [:json]
+  use OpenApiSpex.ControllerSpecs
 
+  alias OpenApiSpex.{Parameter, Schema}
   alias SyncFlow.Core.CommandedApp
   alias SyncFlow.CRM.{Commands, Queries}
+
+  tags ["Customers"]
+  security [%{"bearerAuth" => []}]
+
+  operation :index,
+    summary: "List customers",
+    parameters: [
+      %Parameter{name: :status, in: :query, schema: %Schema{type: :string, enum: ~w(active inactive blocked)}},
+      %Parameter{name: :type, in: :query, schema: %Schema{type: :string, enum: ~w(individual business)}},
+      %Parameter{name: :search, in: :query, schema: %Schema{type: :string}},
+      %Parameter{name: :page, in: :query, schema: %Schema{type: :integer, default: 1}}
+    ],
+    responses: %{
+      200 => SyncFlow.Web.ApiSpec.Operations.json_response(200, "Customer list", "PaginatedResponse")
+    }
+
+  operation :show,
+    summary: "Get customer with recent interactions",
+    parameters: [SyncFlow.Web.ApiSpec.Operations.id_path_param("Customer UUID")],
+    responses: %{
+      200 => SyncFlow.Web.ApiSpec.Operations.json_response(200, "Customer details", "Customer"),
+      404 => SyncFlow.Web.ApiSpec.Operations.json_response(404, "Not found", "ErrorResponse")
+    }
+
+  operation :create,
+    summary: "Register customer",
+    request_body: SyncFlow.Web.ApiSpec.Operations.json_request_body("Customer data", "CreateCustomerRequest"),
+    responses: %{
+      201 => SyncFlow.Web.ApiSpec.Operations.json_response(201, "Customer registered", "Customer"),
+      422 => SyncFlow.Web.ApiSpec.Operations.json_response(422, "Validation error", "ErrorResponse")
+    }
+
+  operation :update,
+    summary: "Update customer",
+    parameters: [SyncFlow.Web.ApiSpec.Operations.id_path_param()],
+    request_body: SyncFlow.Web.ApiSpec.Operations.json_request_body("Updated fields", "CreateCustomerRequest", false),
+    responses: %{200 => SyncFlow.Web.ApiSpec.Operations.json_response(200, "Updated", "Customer")}
+
+  operation :delete,
+    summary: "Deactivate customer",
+    parameters: [SyncFlow.Web.ApiSpec.Operations.id_path_param()],
+    responses: %{204 => %OpenApiSpex.Response{description: "Deactivated"}}
+
+  operation :record_interaction,
+    summary: "Record customer interaction",
+    description: "Log a call, email, meeting, visit, or note against a customer.",
+    parameters: [SyncFlow.Web.ApiSpec.Operations.id_path_param("Customer UUID")],
+    request_body: SyncFlow.Web.ApiSpec.Operations.json_request_body("Interaction data", "RecordInteractionRequest"),
+    responses: %{
+      201 => SyncFlow.Web.ApiSpec.Operations.json_response(201, "Recorded", "Interaction"),
+      422 => SyncFlow.Web.ApiSpec.Operations.json_response(422, "Error", "ErrorResponse")
+    }
+
+  operation :interactions,
+    summary: "List customer interactions",
+    description: "Returns interaction history for a customer (calls, emails, meetings).",
+    parameters: [
+      SyncFlow.Web.ApiSpec.Operations.id_path_param("Customer UUID"),
+      %Parameter{name: :limit, in: :query, schema: %Schema{type: :integer, default: 20}}
+    ],
+    responses: %{
+      200 => SyncFlow.Web.ApiSpec.Operations.json_response(200, "Interactions", "PaginatedResponse"),
+      404 => SyncFlow.Web.ApiSpec.Operations.json_response(404, "Customer not found", "ErrorResponse")
+    }
+
+  operation :stats,
+    summary: "Customer stats by status",
+    description: "Count of customers grouped by status (active, inactive, blocked).",
+    responses: %{
+      200 => SyncFlow.Web.ApiSpec.Operations.json_response(200, "Customer statistics", "CustomerStats")
+    }
+
+  # --- Actions ---
 
   def index(conn, params) do
     customers =
@@ -92,6 +167,24 @@ defmodule SyncFlow.Web.Controllers.CustomerController do
       :ok -> conn |> put_status(:created) |> json(%{data: %{status: "recorded"}})
       {:error, reason} -> conn |> put_status(:unprocessable_entity) |> json(%{error: to_string(reason)})
     end
+  end
+
+  def interactions(conn, %{"id" => id} = params) do
+    case Queries.get_customer(id) do
+      nil ->
+        conn |> put_status(:not_found) |> json(%{error: "Customer not found"})
+
+      _customer ->
+        limit = parse_int(params["limit"], 20)
+        items = Queries.list_interactions(id, limit: limit)
+        json(conn, %{data: items, count: length(items)})
+    end
+  end
+
+  def stats(conn, _params) do
+    data = Queries.customer_stats(conn.assigns.current_org_id)
+    total = data |> Map.values() |> Enum.sum()
+    json(conn, %{data: Map.put(data, :total, total)})
   end
 
   defp parse_int(nil, d), do: d

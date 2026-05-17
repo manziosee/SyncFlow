@@ -113,6 +113,13 @@ defmodule SyncFlow.HR.Queries do
     update_payroll_run(run, %{status: :approved, approved_by: approved_by})
   end
 
+  def list_pay_slips(payroll_run_id) do
+    PaySlip
+    |> where([s], s.payroll_run_id == ^payroll_run_id)
+    |> order_by([s], s.employee_name)
+    |> Repo.all()
+  end
+
   def headcount_by_department(org_id) do
     Employee
     |> where([e], e.org_id == ^org_id and e.status == :active)
