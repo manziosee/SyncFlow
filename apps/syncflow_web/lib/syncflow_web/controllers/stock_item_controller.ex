@@ -1,8 +1,82 @@
 defmodule SyncFlow.Web.Controllers.StockItemController do
   use Phoenix.Controller, formats: [:json]
+  use OpenApiSpex.ControllerSpecs
 
+  alias OpenApiSpex.{Parameter, Schema}
   alias SyncFlow.Core.CommandedApp
   alias SyncFlow.Inventory.{Commands, Queries}
+
+  tags ["Stock Items"]
+  security [%{"bearerAuth" => []}]
+
+  operation :index,
+    summary: "List stock items",
+    parameters: [
+      %Parameter{name: :warehouse_id, in: :query, schema: %Schema{type: :string, format: :uuid}},
+      %Parameter{name: :category, in: :query, schema: %Schema{type: :string}},
+      %Parameter{name: :search, in: :query, schema: %Schema{type: :string}},
+      %Parameter{name: :page, in: :query, schema: %Schema{type: :integer, default: 1}},
+      %Parameter{name: :per_page, in: :query, schema: %Schema{type: :integer, default: 50}}
+    ],
+    responses: %{200 => SyncFlow.Web.ApiSpec.Operations.json_response(200, "Stock items", "PaginatedResponse")}
+
+  operation :show,
+    summary: "Get stock item",
+    parameters: [SyncFlow.Web.ApiSpec.Operations.id_path_param("Stock item UUID")],
+    responses: %{
+      200 => SyncFlow.Web.ApiSpec.Operations.json_response(200, "Stock item details", "StockItem"),
+      404 => SyncFlow.Web.ApiSpec.Operations.json_response(404, "Not found", "ErrorResponse")
+    }
+
+  operation :create,
+    summary: "Create stock item",
+    request_body: SyncFlow.Web.ApiSpec.Operations.json_request_body("Stock item data", "CreateStockItemRequest"),
+    responses: %{
+      201 => SyncFlow.Web.ApiSpec.Operations.json_response(201, "Item created", "StockItem"),
+      422 => SyncFlow.Web.ApiSpec.Operations.json_response(422, "Validation error", "ErrorResponse")
+    }
+
+  operation :update,
+    summary: "Update stock item metadata",
+    description: "Update name, category, unit, reorder points, or unit cost. To change quantity use /adjust or /transfer.",
+    parameters: [SyncFlow.Web.ApiSpec.Operations.id_path_param()],
+    request_body: SyncFlow.Web.ApiSpec.Operations.json_request_body("Updated fields", "CreateStockItemRequest", false),
+    responses: %{200 => SyncFlow.Web.ApiSpec.Operations.json_response(200, "Updated item", "StockItem")}
+
+  operation :delete,
+    summary: "Deactivate stock item",
+    parameters: [SyncFlow.Web.ApiSpec.Operations.id_path_param()],
+    responses: %{204 => %OpenApiSpex.Response{description: "Deactivated"}}
+
+  operation :adjust,
+    summary: "Adjust stock quantity",
+    description: "Add or remove stock using a signed delta. Dispatches AdjustStock command via CQRS.",
+    parameters: [SyncFlow.Web.ApiSpec.Operations.id_path_param("Stock item UUID")],
+    request_body: SyncFlow.Web.ApiSpec.Operations.json_request_body("Adjustment data", "AdjustStockRequest"),
+    responses: %{
+      200 => SyncFlow.Web.ApiSpec.Operations.json_response(200, "Adjusted", "StockItem"),
+      422 => SyncFlow.Web.ApiSpec.Operations.json_response(422, "Insufficient stock or error", "ErrorResponse")
+    }
+
+  operation :transfer,
+    summary: "Transfer stock between warehouses",
+    description: "Initiates an inter-warehouse transfer. Dispatches TransferStock command.",
+    parameters: [SyncFlow.Web.ApiSpec.Operations.id_path_param("Stock item UUID")],
+    request_body: SyncFlow.Web.ApiSpec.Operations.json_request_body("Transfer data", "TransferStockRequest"),
+    responses: %{
+      200 => SyncFlow.Web.ApiSpec.Operations.json_response(200, "Transfer initiated", "StockItem"),
+      422 => SyncFlow.Web.ApiSpec.Operations.json_response(422, "Error", "ErrorResponse")
+    }
+
+  operation :low_stock,
+    summary: "Items below reorder point",
+    description: "Returns all stock items where current quantity <= reorder_point. Subscribe to `inventory:<warehouse_id>` channel for real-time alerts.",
+    parameters: [
+      %Parameter{name: :warehouse_id, in: :query, schema: %Schema{type: :string, format: :uuid, description: "Filter by warehouse"}}
+    ],
+    responses: %{200 => SyncFlow.Web.ApiSpec.Operations.json_response(200, "Low stock items", "PaginatedResponse")}
+
+  # --- Actions ---
 
   def index(conn, params) do
     items =
@@ -51,8 +125,6 @@ defmodule SyncFlow.Web.Controllers.StockItemController do
   end
 
   def update(conn, %{"id" => id} = params) do
-    # Stock item metadata updates go through Ecto directly (not CQRS)
-    # Quantity changes must use adjust/transfer
     item = Queries.get_stock_item!(id)
 
     changes =

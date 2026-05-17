@@ -1,8 +1,40 @@
 defmodule SyncFlow.Web.Controllers.AuthController do
   use Phoenix.Controller, formats: [:json]
+  use OpenApiSpex.ControllerSpecs
 
   alias SyncFlow.Core.Accounts
   alias SyncFlow.Core.Auth.Guardian
+
+  tags ["Auth"]
+
+  operation :login,
+    summary: "Login",
+    description: "Authenticate with email and password. Returns JWT access and refresh tokens.",
+    request_body: SyncFlow.Web.ApiSpec.Operations.json_request_body("Login credentials", "LoginRequest"),
+    responses: %{
+      200 => SyncFlow.Web.ApiSpec.Operations.json_response(200, "Tokens + user profile", "LoginResponse"),
+      401 => SyncFlow.Web.ApiSpec.Operations.json_response(401, "Invalid credentials", "ErrorResponse")
+    }
+
+  operation :register,
+    summary: "Register organization + admin user",
+    description: "Creates a new organization and an admin user in one step.",
+    request_body: SyncFlow.Web.ApiSpec.Operations.json_request_body("Registration data", "RegisterRequest"),
+    responses: %{
+      201 => SyncFlow.Web.ApiSpec.Operations.json_response(201, "Org + user created", "LoginResponse"),
+      422 => SyncFlow.Web.ApiSpec.Operations.json_response(422, "Validation error", "ErrorResponse")
+    }
+
+  operation :refresh,
+    summary: "Refresh access token",
+    description: "Exchange a valid refresh token for a new access token.",
+    request_body: SyncFlow.Web.ApiSpec.Operations.json_request_body("Refresh token", "RefreshRequest"),
+    responses: %{
+      200 => SyncFlow.Web.ApiSpec.Operations.json_response(200, "New access token", "LoginResponse"),
+      401 => SyncFlow.Web.ApiSpec.Operations.json_response(401, "Invalid or expired refresh token", "ErrorResponse")
+    }
+
+  # --- Actions ---
 
   def login(conn, %{"email" => email, "password" => password}) do
     case Accounts.authenticate(email, password) do

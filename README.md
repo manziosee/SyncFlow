@@ -1,7 +1,23 @@
-# SyncFlow — Real-Time Multiplayer ERP
+<div align="center">
 
-> A state-synchronized business operating system combining ERP, Google Docs-style collaboration,
-> Slack-like activity feeds, live analytics, and AI automation — built with Elixir Phoenix.
+# SyncFlow
+
+### Real-Time Multiplayer ERP
+
+*A state-synchronized business operating system — combining ERP, Google Docs-style collaboration, live analytics, and AI automation into one platform.*
+
+---
+
+![Elixir](https://img.shields.io/badge/Elixir-1.16-4B275F?style=for-the-badge&logo=elixir&logoColor=white)
+![Phoenix](https://img.shields.io/badge/Phoenix-1.7-FD4F00?style=for-the-badge&logo=phoenixframework&logoColor=white)
+![Next.js](https://img.shields.io/badge/Next.js-15-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-316192?style=for-the-badge&logo=postgresql&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis-7-DC382D?style=for-the-badge&logo=redis&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![Claude AI](https://img.shields.io/badge/Claude_AI-Anthropic-000000?style=for-the-badge&logo=anthropic&logoColor=white)
+
+</div>
 
 ---
 
@@ -14,74 +30,123 @@
 | Feels slow | Dashboard updates live as data changes |
 | Per-module silos | Unified event stream across all domains |
 | Audit log as afterthought | Event sourcing — every change is permanent history |
+| Batch payroll | Background PAYE calculation with live notification |
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology | Why |
+### Backend
+
+| Layer | Technology | Purpose |
 |---|---|---|
-| **Backend** | Elixir + Phoenix 1.7 | Built for millions of connections, fault-tolerant, OTP supervision |
-| **Realtime** | Phoenix Channels + Presence | Battle-tested multiplayer sync, cursor tracking, pub/sub |
-| **Architecture** | CQRS + Event Sourcing (Commanded) | Immutable audit trail, time-travel debugging, conflict-free collaboration |
-| **Database** | PostgreSQL 16 | Projections (read models) + event store |
-| **Background Jobs** | Oban | Reliable async processing (payroll, reports, AI) |
-| **Auth** | Guardian JWT | Stateless, role-based, field-level security |
-| **API Docs** | OpenAPI 3.0 (open_api_spex) | Interactive Swagger UI |
-| **AI** | Claude API (Anthropic) | Natural language commands |
+| **Language** | ![Elixir](https://img.shields.io/badge/Elixir-4B275F?logo=elixir&logoColor=white) Elixir 1.16 + Erlang/OTP 26 | Fault-tolerant concurrency, millions of connections |
+| **Web** | ![Phoenix](https://img.shields.io/badge/Phoenix-FD4F00?logo=phoenixframework&logoColor=white) Phoenix 1.7 | HTTP + WebSocket channels + Presence |
+| **Architecture** | Commanded 1.4 + EventStore 1.4 | CQRS + Event Sourcing — immutable audit trail |
+| **Database** | ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?logo=postgresql&logoColor=white) PostgreSQL 16 | Event store + read model projections (one DB per app) |
+| **Cache** | ![Redis](https://img.shields.io/badge/Redis-DC382D?logo=redis&logoColor=white) Redis 7 | PubSub backend (optional) |
+| **In-Memory** | Erlang ETS (GenServer) | Live GPS cache — 1 000 vehicles × ~200 bytes |
+| **Background Jobs** | Oban 2.17 | Async payroll, notifications, report generation |
+| **Auth** | Guardian 2.3 (JWT) | Stateless, role + org embedded in token |
+| **API Docs** | OpenAPI 3.0 (open_api_spex 3.21) | Interactive Swagger UI |
+| **AI** | ![Claude](https://img.shields.io/badge/Claude-Anthropic-000000?logo=anthropic&logoColor=white) Claude Sonnet (Anthropic) | Natural language ERP commands |
+| **Infra** | ![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white) Docker Compose | PostgreSQL + Redis + PgAdmin |
+
+### Frontend
+
+| Layer | Technology | Purpose |
+|---|---|---|
+| **Framework** | ![Next.js](https://img.shields.io/badge/Next.js-15-000000?logo=nextdotjs&logoColor=white) Next.js 15 (App Router) | React server + client components, file-based routing |
+| **Language** | ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white) TypeScript 5 | Type-safe API contracts and component props |
+| **Styling** | ![Tailwind](https://img.shields.io/badge/Tailwind_CSS-3-06B6D4?logo=tailwindcss&logoColor=white) Tailwind CSS 3 | Utility-first design system with custom SyncFlow tokens |
+| **Data Fetching** | TanStack Query v5 | Server state, caching, background refetch |
+| **HTTP Client** | Axios | REST API calls with 401 interceptor → auto logout |
+| **Real-time** | Phoenix JS (WebSocket) | Live channels — invoice collaboration, GPS, live feed |
+| **Charts** | Recharts | Area charts, bar charts, responsive containers |
+| **Icons** | Lucide React | Consistent icon set across all modules |
+| **Notifications** | react-hot-toast | Action feedback (success / error toasts) |
+| **Demo Mode** | Hardcoded mock data | Offline-capable UI with realistic RWF figures |
 
 ---
 
 ## Architecture
 
 ```
-                        ┌─────────────────────────────────┐
-                        │         React Frontend           │
-                        │  REST API + WebSocket Channels   │
-                        └────────────┬────────────────────┘
-                                     │
-                        ┌────────────▼────────────────────┐
-                        │       Phoenix Web (Port 4000)    │
-                        │  Router → Controllers            │
-                        │  UserSocket → Channels           │
-                        │  Presence (cursor tracking)      │
-                        └────────────┬────────────────────┘
-                                     │
-              ┌──────────────────────▼────────────────────────┐
-              │                  PubSub                        │
-              │  Projectors broadcast → Channels push to UI   │
-              └──────────────────────┬────────────────────────┘
-                                     │
-    ┌──────────────┬─────────────────▼──────────────┬──────────────┐
-    │              │                                  │              │
-    ▼              ▼                                  ▼              ▼
-Command      Commanded           Projectors       Event Store
-Dispatch  →  Router &         (update read     (append-only
-             Aggregates  →     models in   →   PostgreSQL)
-             (business         PostgreSQL)
-              rules)
+┌──────────────────────────────────────────────────────────────────────┐
+│                       React / Mobile Client                          │
+│                REST API  +  WebSocket Channels                       │
+└────────────────────────────┬─────────────────────────────────────────┘
+                             │ HTTP / WS
+┌────────────────────────────▼─────────────────────────────────────────┐
+│                  Phoenix Web  (Port 4000)                             │
+│  ┌────────────┐  ┌──────────────────┐  ┌──────────────────────────┐  │
+│  │  Router    │  │   Controllers    │  │    WebSocket Channels    │  │
+│  │  (REST)    │  │   (12 domains)   │  │  invoice · fleet ·       │  │
+│  └────────────┘  └──────────────────┘  │  dashboard · inventory · │  │
+│                                        │  notifications           │  │
+│                  Guardian JWT Auth     └──────────────────────────┘  │
+│                  OpenAPI 3.0 / Swagger    Phoenix Presence            │
+└────────────────────────────┬─────────────────────────────────────────┘
+                             │ PubSub broadcast
+┌────────────────────────────▼─────────────────────────────────────────┐
+│                       Phoenix.PubSub                                  │
+│          Projectors broadcast events → Channels push to UI            │
+└──────┬───────────────┬─────────────┬──────────────┬──────────────────┘
+       │               │             │              │
+       ▼               ▼             ▼              ▼
+  Command          Commanded     Projectors     Event Store
+  Dispatch    →   Router &    (update read   (append-only
+  (REST/WS)       Aggregates   models in    PostgreSQL)
+                  (business    PostgreSQL)
+                   rules &
+                   validation)
+       │
+       ▼
+  Oban Workers  ──→  PayrollWorker
+  (background)       NotificationWorker
+                     ReportWorker
+                     (email via Mailgun)
 ```
 
-### CQRS Flow (Example: Editing an Invoice)
+### CQRS Flow — Editing an Invoice Live
 
 ```
-User types in UI
-      ↓
-WebSocket sends "update_field" to InvoiceChannel
-      ↓
-Channel dispatches UpdateInvoiceField command
-      ↓
-Invoice aggregate validates (status == :draft?)
-      ↓
-InvoiceFieldUpdated event appended to event store
-      ↓
-InvoiceProjector updates read model in PostgreSQL
-      ↓
-Projector broadcasts via Phoenix PubSub
-      ↓
-ALL connected editors receive "field_updated" push
-      ↓
-UI updates instantly — no refresh needed
+Accountant A types in browser
+       ↓
+WebSocket pushes "update_field" to InvoiceChannel
+       ↓
+InvoiceChannel.handle_in() dispatches UpdateInvoiceField command
+       ↓
+Invoice aggregate validates (status == :draft? field allowed?)
+       ↓
+InvoiceFieldUpdated event appended to PostgreSQL event store
+       ↓
+InvoiceProjector receives event → updates Invoice read model
+       ↓
+Projector broadcasts via Phoenix.PubSub
+       ↓
+ALL connected editors receive "field_updated" push  (<100 ms)
+       ↓
+Accountant B's screen updates instantly — no refresh needed
+```
+
+### Background Payroll Processing
+
+```
+POST /api/hr/payroll/:id/process
+       ↓
+PayrollWorker enqueued via Oban (queue: :payroll)
+       ↓  (async — returns 202 immediately)
+Worker fetches all active employees
+       ↓
+Rwanda PAYE calculated per employee:
+  0 – 60,000 RWF    →  0%
+  60,001 – 100,000  →  20% on excess
+  100,001+          →  8,000 + 30% on excess
+       ↓
+PaySlips inserted in transaction
+       ↓
+PubSub broadcast to dashboard + personal notification
 ```
 
 ---
@@ -89,61 +154,105 @@ UI updates instantly — no refresh needed
 ## Project Structure
 
 ```
-syncflow/                           # Umbrella root
+syncflow/                            # Umbrella root
 ├── apps/
-│   ├── syncflow_core/              # Foundation
-│   │   ├── event_store/            # EventStore + Commanded app
-│   │   ├── auth/                   # Guardian JWT, pipelines
-│   │   ├── accounts/               # User, Organization schemas
-│   │   └── router.ex               # Commanded command router
+│   ├── syncflow_core/               # Foundation
+│   │   ├── auth/                    # Guardian JWT, pipeline
+│   │   ├── accounts/                # User, Organization schemas
+│   │   ├── event_store/             # EventStore + Commanded app
+│   │   ├── router.ex                # Commanded command router
+│   │   └── workers/
+│   │       ├── payroll_worker.ex    # ★ Oban — async PAYE payroll
+│   │       ├── notification_worker.ex # ★ Oban — in-app + email
+│   │       └── report_worker.ex     # ★ Oban — async report generation
 │   │
-│   ├── syncflow_accounting/        # Invoicing & Ledger
-│   │   ├── aggregates/invoice.ex   # Invoice business rules
-│   │   ├── commands.ex             # CreateInvoice, ApproveInvoice, etc.
-│   │   ├── events.ex               # InvoiceCreated, InvoiceApproved, etc.
-│   │   ├── projectors/             # Update read models + broadcast
-│   │   ├── queries.ex              # Read model queries
-│   │   └── schema/                 # Invoice, LedgerEntry, Payment
+│   ├── syncflow_accounting/         # Invoicing & Ledger (CQRS/ES)
+│   │   ├── aggregates/invoice.ex    # Invoice state machine
+│   │   ├── commands.ex              # CreateInvoice, ApproveInvoice …
+│   │   ├── events.ex                # InvoiceCreated, InvoiceApproved …
+│   │   ├── projectors/              # Update read models + PubSub broadcast
+│   │   ├── queries.ex               # Read model queries + revenue reports
+│   │   └── schema/                  # Invoice, LedgerEntry
 │   │
-│   ├── syncflow_inventory/         # Stock & Warehouses
-│   │   ├── aggregates/stock_item.ex
-│   │   ├── tracker (ETS)           # Live stock levels
-│   │   └── ...
+│   ├── syncflow_inventory/          # Stock & Warehouses (CQRS/ES)
+│   │   ├── aggregates/stock_item.ex # Stock state machine + reservations
+│   │   ├── commands.ex              # AdjustStock, TransferStock, ReserveStock …
+│   │   ├── projectors/              # Updates + low-stock alerts
+│   │   └── queries.ex               # Low-stock queries + inventory value
 │   │
-│   ├── syncflow_hr/                # HR & Payroll
-│   │   ├── schema/employee.ex
-│   │   ├── schema/payroll_run.ex
-│   │   └── queries.ex              # PAYE tax calculation (Rwanda brackets)
+│   ├── syncflow_hr/                 # HR & Payroll (Ecto CRUD)
+│   │   ├── schema/employee.ex       # Employee record
+│   │   ├── schema/payroll_run.ex    # PayrollRun + PaySlip schemas
+│   │   └── queries.ex               # PAYE calculation + pay slip generation
 │   │
-│   ├── syncflow_crm/               # Customer Relations
-│   │   ├── aggregates/customer.ex
-│   │   └── ...
+│   ├── syncflow_crm/                # Customer Relations (CQRS/ES)
+│   │   ├── aggregates/customer.ex   # Customer state machine
+│   │   ├── commands.ex              # RegisterCustomer, RecordInteraction …
+│   │   └── queries.ex               # List customers, interaction history, stats
 │   │
-│   ├── syncflow_fleet/             # Vehicle & GPS Tracking
-│   │   ├── aggregates/vehicle.ex
-│   │   ├── tracker.ex              # ETS GenServer — live GPS in memory
-│   │   └── ...
+│   ├── syncflow_fleet/              # Fleet & GPS (CQRS/ES)
+│   │   ├── aggregates/vehicle.ex    # Vehicle state machine
+│   │   ├── tracker.ex               # ETS GenServer — live GPS in memory
+│   │   ├── commands.ex              # StartTrip, UpdateLocation, LogFuelEvent …
+│   │   └── queries.ex               # Trip history, fuel costs, fleet summary
 │   │
-│   └── syncflow_web/               # Phoenix Web Layer
-│       ├── channels/               # 5 real-time channels
-│       │   ├── invoice_channel.ex  # Multiplayer invoice editing
-│       │   ├── dashboard_channel.ex# Live KPIs & analytics
-│       │   ├── fleet_channel.ex    # GPS tracking
-│       │   ├── inventory_channel.ex# Live stock updates
-│       │   └── notification_channel.ex
-│       ├── controllers/            # 12 REST controllers
-│       ├── api_spec/               # OpenAPI 3.0 schemas & spec
+│   └── syncflow_web/                # Phoenix Web Layer
+│       ├── channels/
+│       │   ├── invoice_channel.ex   # Multiplayer invoice editing + presence
+│       │   ├── dashboard_channel.ex # Live CEO / Warehouse KPIs
+│       │   ├── fleet_channel.ex     # GPS tracking + driver pings
+│       │   ├── inventory_channel.ex # Live stock updates
+│       │   └── notification_channel.ex # Personal alerts
+│       ├── controllers/             # 14 REST controllers
+│       │   ├── dashboard_controller.ex  # ★ CEO + Warehouse + Regional
+│       │   ├── report_controller.ex     # ★ Async report generation
+│       │   ├── ai_controller.ex         # ★ 9 NL intents via Claude
+│       │   └── ...
+│       ├── api_spec/                # OpenAPI 3.0 schemas + spec
 │       └── router.ex
 │
-├── config/
-│   ├── config.exs                  # Shared config
-│   ├── dev.exs                     # Dev (local PostgreSQL)
-│   ├── test.exs
-│   └── runtime.exs                 # Production env vars
+├── frontend/                        # Next.js 15 App Router (TypeScript)
+│   ├── app/
+│   │   ├── (auth)/                  # Public auth routes
+│   │   │   ├── layout.tsx           # Split-screen dark auth layout
+│   │   │   ├── login/page.tsx       # Login with demo-mode shortcut
+│   │   │   └── register/page.tsx    # Org registration form
+│   │   ├── (app)/                   # Protected app routes
+│   │   │   ├── layout.tsx           # Sidebar + Topbar shell
+│   │   │   ├── dashboard/page.tsx   # CEO KPI dashboard + Recharts
+│   │   │   ├── invoices/
+│   │   │   │   ├── page.tsx         # Invoice list + search + create modal
+│   │   │   │   └── [id]/page.tsx    # Invoice detail + live presence
+│   │   │   ├── inventory/page.tsx   # Stock items + warehouses + low-stock
+│   │   │   ├── hr/page.tsx          # Employees + payroll runs + pay slips
+│   │   │   ├── fleet/page.tsx       # Vehicles + GPS map + fuel log
+│   │   │   ├── customers/page.tsx   # CRM cards + interaction panel
+│   │   │   ├── ai/page.tsx          # AI chat with data table renderer
+│   │   │   ├── reports/page.tsx     # Report generator + inline charts
+│   │   │   └── settings/page.tsx    # Profile, notifications, security
+│   │   ├── page.tsx                 # Public landing page
+│   │   └── globals.css              # Tailwind base + component utilities
+│   ├── components/
+│   │   └── layout/
+│   │       ├── Sidebar.tsx          # Collapsible dark nav + role badges
+│   │       └── Topbar.tsx           # Page title + breadcrumb bar
+│   ├── lib/
+│   │   ├── api.ts                   # Axios client + demo-mode mock stubs
+│   │   ├── auth-context.tsx         # Auth state, demo login bypass
+│   │   ├── mock-data.ts             # Realistic Rwandan demo dataset
+│   │   └── socket.ts                # Phoenix WebSocket channel helpers
+│   ├── tailwind.config.js           # Custom tokens: primary, sidebar, canvas, ink
+│   └── package.json
 │
-├── docker-compose.yml              # PostgreSQL 16 + Redis + PgAdmin
-├── Makefile                        # Developer commands
-├── install.sh                      # One-command setup
+├── config/
+│   ├── config.exs                   # Shared config (Oban, Commanded, Guardian)
+│   ├── dev.exs                      # Local PostgreSQL
+│   ├── test.exs
+│   └── runtime.exs                  # Production env vars
+│
+├── docker-compose.yml               # PostgreSQL 16 + Redis 7 + PgAdmin 4
+├── Makefile                         # Developer commands
+├── install.sh                       # One-command setup
 └── .env.example
 ```
 
@@ -155,7 +264,7 @@ syncflow/                           # Umbrella root
 
 - Git
 - Docker & Docker Compose
-- (Elixir will be auto-installed by `install.sh` via asdf)
+- Elixir 1.16 + Erlang 26 (auto-installed by `install.sh` via asdf)
 
 ### 1. Clone & Install
 
@@ -163,12 +272,12 @@ syncflow/                           # Umbrella root
 git clone https://github.com/your-org/syncflow.git
 cd syncflow
 
-# Full auto-install (Elixir + Erlang via asdf + infra + DB setup)
+# Full one-command setup
 ./install.sh
 
 # Or step by step:
-make install    # Install Elixir via asdf
-make infra      # Start Docker (PostgreSQL, Redis)
+make install    # Install Elixir + Erlang via asdf
+make infra      # Start Docker (PostgreSQL 16, Redis 7)
 make deps       # Fetch Mix dependencies
 make migrate    # Create databases & run migrations
 ```
@@ -177,21 +286,22 @@ make migrate    # Create databases & run migrations
 
 ```bash
 cp .env.example .env
-# Edit .env and set:
-# - GUARDIAN_SECRET (required)
-# - SECRET_KEY_BASE (required, generate with: mix phx.gen.secret)
-# - ANTHROPIC_API_KEY (optional, for AI commands)
+# Required:
+GUARDIAN_SECRET=<generate with: mix phx.gen.secret 32>
+SECRET_KEY_BASE=<generate with: mix phx.gen.secret>
+
+# Optional:
+ANTHROPIC_API_KEY=<your Claude API key — enables AI commands>
+MAILGUN_API_KEY=<Mailgun key — enables email notifications>
 ```
 
 ### 3. Start the Server
 
 ```bash
 make server
-# or:
-iex -S mix phx.server
+# → http://localhost:4000
+# → Swagger UI: http://localhost:4000/api/docs
 ```
-
-The server starts at **http://localhost:4000**
 
 ---
 
@@ -222,14 +332,13 @@ http://localhost:4000/api/openapi
 | `POST` | `/api/auth/refresh` | Refresh access token |
 | `GET` | `/api/health` | Health check |
 
-**Login example:**
 ```bash
 curl -X POST http://localhost:4000/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email": "admin@company.rw", "password": "secret123"}'
 ```
 
-**All authenticated endpoints require:**
+All authenticated endpoints require:
 ```
 Authorization: Bearer <access_token>
 ```
@@ -250,7 +359,7 @@ Authorization: Bearer <access_token>
 | `POST` | `/api/accounting/invoices/:id/void` | Void invoice |
 | `GET` | `/api/accounting/invoices/stats` | Invoice KPIs by status |
 | `GET` | `/api/accounting/invoices/overdue` | Overdue invoices |
-| `GET` | `/api/revenue/monthly?year=2024` | Monthly revenue breakdown |
+| `GET` | `/api/accounting/revenue/monthly?year=2024` | Monthly revenue breakdown |
 
 ---
 
@@ -260,7 +369,8 @@ Authorization: Bearer <access_token>
 |--------|------|-------------|
 | `GET` | `/api/inventory/warehouses` | List warehouses |
 | `POST` | `/api/inventory/warehouses` | Create warehouse |
-| `GET` | `/api/inventory/stock-items` | List stock items |
+| `GET` | `/api/inventory/warehouses/value` | ★ Total inventory value (all warehouses) |
+| `GET` | `/api/inventory/stock-items` | List stock items (filter by warehouse, category) |
 | `POST` | `/api/inventory/stock-items` | Add stock item |
 | `POST` | `/api/inventory/stock-items/:id/adjust` | Adjust quantity (±delta) |
 | `POST` | `/api/inventory/stock-items/:id/transfer` | Transfer between warehouses |
@@ -276,10 +386,12 @@ Authorization: Bearer <access_token>
 | `POST` | `/api/hr/employees` | Register employee |
 | `GET` | `/api/hr/employees/:id` | Get employee |
 | `PUT` | `/api/hr/employees/:id` | Update employee |
+| `GET` | `/api/hr/headcount` | ★ Headcount by department |
 | `GET` | `/api/hr/payroll` | List payroll runs |
 | `POST` | `/api/hr/payroll` | Create payroll run |
-| `POST` | `/api/hr/payroll/:id/process` | Calculate pay slips (Rwanda PAYE) |
+| `POST` | `/api/hr/payroll/:id/process` | ★ Process (async PAYE via Oban) |
 | `POST` | `/api/hr/payroll/:id/approve` | Approve payroll |
+| `GET` | `/api/hr/payroll/:id/pay-slips` | ★ Individual pay slips |
 
 ---
 
@@ -291,7 +403,9 @@ Authorization: Bearer <access_token>
 | `POST` | `/api/crm/customers` | Register customer |
 | `GET` | `/api/crm/customers/:id` | Get customer + recent interactions |
 | `PUT` | `/api/crm/customers/:id` | Update customer |
+| `GET` | `/api/crm/customers/stats` | ★ Customer stats by status |
 | `POST` | `/api/crm/customers/:id/interactions` | Log call/email/meeting |
+| `GET` | `/api/crm/customers/:id/interactions` | ★ Full interaction history |
 
 ---
 
@@ -303,27 +417,68 @@ Authorization: Bearer <access_token>
 | `POST` | `/api/fleet/vehicles` | Register vehicle |
 | `GET` | `/api/fleet/vehicles/:id` | Vehicle details + live GPS |
 | `POST` | `/api/fleet/vehicles/:id/assign-driver` | Assign driver |
-| `GET` | `/api/fleet/vehicles/live` | All active vehicle positions |
+| `GET` | `/api/fleet/vehicles/live` | All active vehicle GPS positions |
+| `GET` | `/api/fleet/vehicles/summary` | ★ Fleet status summary + fuel costs |
 | `GET` | `/api/fleet/trips` | Trip history |
 | `GET` | `/api/fleet/trips/:id` | Trip details |
+| `GET` | `/api/fleet/fuel?vehicle_id=<id>` | ★ Fuel records for a vehicle |
 | `POST` | `/api/fleet/fuel` | Log fuel event |
 
 ---
 
-### Dashboard & AI
+### Dashboard
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/api/dashboard/ceo` | CEO dashboard: invoice KPIs + fleet |
-| `GET` | `/api/dashboard/warehouse` | Warehouse dashboard |
-| `POST` | `/api/ai/command` | Natural language ERP commands |
+| `GET` | `/api/dashboard/ceo` | ★ CEO dashboard: all KPIs across every domain |
+| `GET` | `/api/dashboard/warehouse` | ★ Warehouse dashboard: stock levels per warehouse |
+| `GET` | `/api/dashboard/regional` | ★ Regional breakdown by warehouse location |
 
-**AI command example:**
+---
+
+### Reports (Async)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/reports/generate` | ★ Enqueue report (result pushed to notification channel) |
+
+**Report types:** `monthly_revenue`, `inventory_audit`, `payroll_summary`, `fleet_utilization`, `overdue_invoices`
+
+```bash
+curl -X POST http://localhost:4000/api/reports/generate \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"type": "monthly_revenue", "year": 2024}'
+# → 202 Accepted. Result pushed via notifications:<user_id> channel.
+```
+
+---
+
+### AI — Natural Language Commands
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/ai/command` | Free-text ERP command |
+
+**Supported intents:**
+
+| Intent | Example |
+|--------|---------|
+| `create_invoice` | "Create invoice for MTN Rwanda for 5,000,000 RWF" |
+| `list_invoices` | "Show all pending invoices" |
+| `overdue_query` | "What is the total overdue amount this month?" |
+| `low_stock_query` | "Show Kigali warehouse low stock items" |
+| `transfer_stock` | "Transfer 200 bags of cement from Kigali to Musanze" |
+| `fleet_status` | "How many vehicles are on trip right now?" |
+| `headcount_query` | "How many employees do we have in Finance?" |
+| `payroll_status` | "Is payroll for April approved?" |
+| `inventory_value` | "What is the total inventory value?" |
+
 ```bash
 curl -X POST http://localhost:4000/api/ai/command \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"message": "Create invoice for MTN Rwanda for 5,000,000 RWF"}'
+  -d '{"message": "What is the total overdue amount this month?"}'
 ```
 
 ---
@@ -336,61 +491,62 @@ Connect: `ws://localhost:4000/socket/websocket?token=<jwt>`
 
 ```javascript
 const channel = socket.channel("invoice:550e8400-e29b-41d4-a716-446655440000")
-
 channel.join()
-  .receive("ok", ({invoice_id}) => console.log("Joined invoice", invoice_id))
 
-// Edit a field
+// Edit a field — all connected users see the change instantly
 channel.push("update_field", {field: "customer_name", value: "MTN Rwanda"})
-
-// Listen for collaborator edits
-channel.on("field_updated", ({field, value, user_name}) => {
-  console.log(`${user_name} changed ${field} to ${value}`)
-  updateUI(field, value)
-})
+channel.on("field_updated", ({field, value, user_name}) => updateUI(field, value))
 
 // Cursor tracking
-channel.push("cursor_move", {field: "due_date", x: 120, y: 45})
-channel.on("cursor_moved", ({user_id, user_name, field}) => {
-  showCollaboratorCursor(user_id, user_name, field)
-})
+channel.push("cursor_move", {field: "due_date"})
+channel.on("cursor_moved", ({user_id, user_name, field}) => showCursor(user_id, field))
 
-// Presence (who's editing)
-channel.on("presence_state", (state) => showOnlineEditors(state))
-channel.on("presence_diff", (diff) => updateEditorList(diff))
+// Who's editing right now
+channel.on("presence_state", state => showOnlineEditors(state))
+channel.on("presence_diff", diff => updateEditorList(diff))
 ```
 
 ### Fleet Channel — Live GPS
 
 ```javascript
 const fleet = socket.channel("fleet:live")
+fleet.join().receive("ok", ({vehicles}) => vehicles.forEach(plotOnMap))
+fleet.on("vehicle_moved", ({vehicle_id, latitude, longitude, speed_kmh}) => updateMarker(vehicle_id, latitude, longitude))
 
-fleet.join().receive("ok", ({vehicles}) => {
-  vehicles.forEach(v => plotVehicleOnMap(v))
-})
-
-// Real-time position updates
-fleet.on("vehicle_moved", ({vehicle_id, latitude, longitude, speed_kmh}) => {
-  updateVehicleMarker(vehicle_id, latitude, longitude)
-})
-
-// Driver sends GPS pings
-const driverChannel = socket.channel("fleet:vehicle:abc-123")
-driverChannel.push("location_ping", {lat: -1.944, lng: 30.062, speed: 65, heading: 90})
+// Driver app sends GPS pings
+const driverCh = socket.channel("fleet:vehicle:abc-123")
+driverCh.push("location_ping", {lat: -1.944, lng: 30.062, speed: 65, heading: 90})
 ```
 
 ### Dashboard Channel — Live KPIs
 
 ```javascript
-const dashboard = socket.channel("dashboard:ceo")
-
-dashboard.join().receive("ok", ({dashboard}) => console.log("Dashboard ready"))
-
-dashboard.on("dashboard_data", (data) => renderKPIs(data))
-dashboard.on("kpi_update", ({type, delta}) => updateCounter(type, delta))
-dashboard.on("alert", ({type, severity, body}) => showAlert(type, body, severity))
-dashboard.on("vehicle_location", (pos) => updateFleetMap(pos))
+const dash = socket.channel("dashboard:ceo")
+dash.join()
+dash.on("dashboard_data", data => renderKPIs(data))
+dash.on("kpi_update", ({type, delta}) => updateCounter(type, delta))
+dash.on("alert", ({type, severity, body}) => showAlert(type, body, severity))
+dash.on("vehicle_location", pos => updateFleetMap(pos))
 ```
+
+### Notifications Channel — Personal Alerts
+
+```javascript
+const notif = socket.channel(`notifications:${userId}`)
+notif.join()
+notif.on("notification", ({type, title, body, severity}) => showToast(title, body))
+// Receives: payroll_done, invoice_approved, low_stock, report_ready, ...
+```
+
+---
+
+## Background Job Workers
+
+| Worker | Queue | Trigger | Effect |
+|--------|-------|---------|--------|
+| `PayrollWorker` | `:payroll` | `POST /payroll/:id/process` | Calculates PAYE for all employees, inserts pay slips, notifies dashboard |
+| `NotificationWorker` | `:notifications` | Any domain event | Broadcasts in-app notification or sends email via Mailgun |
+| `ReportWorker` | `:reports` | `POST /reports/generate` | Generates heavy report, pushes result to user's notification channel |
 
 ---
 
@@ -401,7 +557,7 @@ dashboard.on("vehicle_location", (pos) => updateFleetMap(pos))
 | `superadmin` | Everything across all orgs |
 | `admin` | Full access within org |
 | `ceo` | Read all dashboards, approve invoices |
-| `manager` | Manage team members, approve workflows |
+| `manager` | Manage team, approve workflows |
 | `accountant` | Full accounting access |
 | `cashier` | Create/edit draft invoices |
 | `warehouse_manager` | Full inventory access |
@@ -413,43 +569,45 @@ dashboard.on("vehicle_location", (pos) => updateFleetMap(pos))
 
 ---
 
-## AI Natural Language Commands
+## Event Sourcing & Audit Trail
 
-With `ANTHROPIC_API_KEY` set, the `/api/ai/command` endpoint parses free-text:
+Every state change is an immutable event in the event store:
 
+```elixir
+# View full history for an invoice
+SyncFlow.Core.EventStore.read_stream_forward("invoice-#{invoice_id}")
+# → [InvoiceCreated, InvoiceFieldUpdated, InvoiceSubmittedForApproval, InvoiceApproved]
 ```
-"Create invoice for BK Group for 5,000,000 RWF consulting services"
-"Show all Kigali warehouse low stock items"
-"What is the total overdue amount this month?"
-"Transfer 200 bags of cement from Kigali to Musanze warehouse"
-```
 
-Without the API key, a rule-based fallback handles common commands in dev.
+This gives you:
+- **Complete audit trail** — who changed what and when
+- **Time travel** — rebuild state at any point in history
+- **Event replay** — rebuild read models from scratch if needed
+- **Conflict-free collaboration** — per-field last-write-wins
 
 ---
 
 ## Development Commands
 
 ```bash
-make server          # Start server (iex + Phoenix)
+make server          # Start server (iex + Phoenix) → http://localhost:4000
 make test            # Run test suite
 make test.cover      # Run with coverage report
 make format          # Format all .ex files
-make lint            # Check formatting + Credo
+make lint            # Format check + Credo static analysis
 make reset           # Drop + recreate all databases
 
 # Database
-make migrate         # Run pending migrations
+make migrate         # Run pending migrations across all apps
 mix ecto.rollback    # Rollback last migration (per app)
 
 # Docker infra
-docker compose up -d     # Start PostgreSQL + Redis + PgAdmin
+docker compose up -d     # Start PostgreSQL 16 + Redis 7 + PgAdmin
 docker compose down      # Stop
 docker compose logs -f   # Follow logs
 
-# PgAdmin
-open http://localhost:5050
-# Login: admin@syncflow.local / admin
+# PgAdmin — web DB explorer
+open http://localhost:5050   # admin@syncflow.local / admin
 ```
 
 ---
@@ -459,33 +617,14 @@ open http://localhost:5050
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `DATABASE_URL` | Prod only | PostgreSQL connection string |
-| `SECRET_KEY_BASE` | Prod only | 64-byte Phoenix secret |
-| `GUARDIAN_SECRET` | Yes | JWT signing key |
-| `ANTHROPIC_API_KEY` | No | Enable Claude AI commands |
-| `MAILGUN_API_KEY` | No | Email delivery |
-| `POOL_SIZE` | No | DB connection pool (default 10) |
+| `SECRET_KEY_BASE` | Prod only | 64-byte Phoenix secret (mix phx.gen.secret) |
+| `GUARDIAN_SECRET` | Yes | JWT signing key (mix phx.gen.secret 32) |
+| `ANTHROPIC_API_KEY` | No | Enable Claude AI natural language commands |
+| `MAILGUN_API_KEY` | No | Email delivery for notifications |
+| `MAILGUN_DOMAIN` | No | Mailgun sending domain (default: syncflow.rw) |
+| `POOL_SIZE` | No | DB connection pool size (default 10) |
 | `PORT` | No | HTTP port (default 4000) |
-| `PHX_HOST` | Prod only | Public hostname |
-
----
-
-## Event Sourcing & Audit Trail
-
-Every state change is an immutable event in the event store:
-
-```elixir
-# View all events for an invoice
-SyncFlow.Core.EventStore.read_stream_forward("invoice-#{invoice_id}")
-
-# The full history is always available:
-# InvoiceCreated → InvoiceFieldUpdated → InvoiceSubmittedForApproval → InvoiceApproved
-```
-
-This gives you:
-- **Complete audit trail** — who changed what and when
-- **Time travel** — rebuild state at any point in history
-- **Event replay** — rebuild read models from scratch
-- **Compliance** — nothing is ever deleted, only appended
+| `PHX_HOST` | Prod only | Public hostname for WebSocket URL generation |
 
 ---
 
@@ -495,7 +634,7 @@ This gives you:
 # Build release
 MIX_ENV=prod mix release
 
-# Run with environment variables
+# Run
 DATABASE_URL=postgresql://... \
 SECRET_KEY_BASE=$(mix phx.gen.secret) \
 GUARDIAN_SECRET=$(mix phx.gen.secret 32) \
@@ -512,7 +651,7 @@ WORKDIR /app
 COPY . .
 RUN mix deps.get && MIX_ENV=prod mix release
 
-FROM alpine:3.18
+FROM alpine:3.19
 RUN apk add --no-cache libstdc++ openssl ncurses-libs
 COPY --from=build /app/_build/prod/rel/syncflow ./
 CMD ["./bin/syncflow", "start"]
@@ -524,7 +663,7 @@ CMD ["./bin/syncflow", "start"]
 
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/procurement-module`
-3. Follow the CQRS pattern: Commands → Aggregates → Events → Projectors
+3. Follow the CQRS pattern: **Commands → Aggregates → Events → Projectors → PubSub**
 4. Add tests for aggregates and projectors
 5. Submit a pull request
 
@@ -536,4 +675,14 @@ MIT — see [LICENSE](LICENSE)
 
 ---
 
-*Built with ❤️ for African businesses. Default currency: RWF. Default timezone: Africa/Kigali.*
+<div align="center">
+
+*Built for African businesses. Default currency: RWF. Default timezone: Africa/Kigali.*
+
+![Elixir](https://img.shields.io/badge/Elixir-1.16-4B275F?style=flat-square&logo=elixir&logoColor=white)
+![Phoenix](https://img.shields.io/badge/Phoenix-1.7-FD4F00?style=flat-square&logo=phoenixframework&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-316192?style=flat-square&logo=postgresql&logoColor=white)
+![Oban](https://img.shields.io/badge/Oban-2.17-000000?style=flat-square)
+![OpenAPI](https://img.shields.io/badge/OpenAPI-3.0-6BA539?style=flat-square&logo=openapiinitiative&logoColor=white)
+
+</div>
