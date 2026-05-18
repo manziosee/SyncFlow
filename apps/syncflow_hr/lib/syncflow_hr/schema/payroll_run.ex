@@ -30,24 +30,3 @@ defmodule SyncFlow.HR.Schema.PayrollRun do
   end
 end
 
-defmodule SyncFlow.HR.Schema.PaySlip do
-  use Ecto.Schema
-
-  @primary_key {:id, :binary_id, autogenerate: true}
-
-  schema "pay_slips" do
-    field :org_id, :binary_id
-    field :payroll_run_id, :binary_id
-    field :employee_id, :binary_id
-    field :employee_name, :string
-    field :gross_salary, :decimal
-    field :deductions, :decimal, default: Decimal.new("0")
-    field :net_salary, :decimal
-    field :tax_amount, :decimal, default: Decimal.new("0")
-    field :allowances, :jsonb
-    field :currency, :string, default: "RWF"
-    field :status, Ecto.Enum, values: [:pending, :paid], default: :pending
-
-    timestamps(type: :utc_datetime)
-  end
-end
