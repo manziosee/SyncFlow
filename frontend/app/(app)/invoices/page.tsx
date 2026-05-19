@@ -184,7 +184,7 @@ export default function InvoicesPage() {
 
   const { data: revenueData } = useQuery({
     queryKey: ['revenue-monthly'],
-    queryFn: () => invoicesApi.monthlyRevenue({ year: new Date().getFullYear() }).then(r => r.data?.data ?? r.data ?? []),
+    queryFn: () => invoicesApi.revenueByMonth(new Date().getFullYear()).then(r => r.data?.data ?? r.data ?? []),
   })
 
   const approveMutation = useMutation({
