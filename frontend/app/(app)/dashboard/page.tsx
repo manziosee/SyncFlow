@@ -1,447 +1,501 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import HeroHeader from '@/components/dashboard/HeroHeader'
+import { dashboardApi, invoicesApi, hrApi, fleetApi, inventoryApi } from '@/lib/api'
 import {
-  BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  AreaChart, Area, PieChart, Pie,
-} from 'recharts'
-import {
-  TrendingUp, AlertCircle, Truck, Users, Package,
-  DollarSign, Activity, RefreshCw, ArrowUpRight, ArrowDownRight,
-  ShoppingCart, Clock, Building2, Star,
+  TrendingUp, TrendingDown, FileText, Users, Truck, Package,
+  AlertTriangle, CheckCircle, DollarSign, BarChart2,
 } from 'lucide-react'
-import { dashboardApi, invoicesApi } from '@/lib/api'
-import { useAuth } from '@/lib/auth-context'
-import { joinChannel, leaveChannel } from '@/lib/socket'
-import Topbar from '@/components/layout/Topbar'
 import clsx from 'clsx'
-
-const fmt = (n: number) =>
-  n >= 1_000_000
-    ? `${(n / 1_000_000).toFixed(1)}M`
-    : n >= 1_000
-    ? `${(n / 1_000).toFixed(0)}K`
-    : String(n)
-
-const fmtRwf = (n: number) => `${fmt(n)} RWF`
-
-interface KpiCardProps {
-  label: string
-  value: string
-  sub?: string
-  icon: React.ElementType
-  color: string
-  trend?: number
-}
-
-function KpiCard({ label, value, sub, icon: Icon, color, trend }: KpiCardProps) {
-  return (
-    <div className="card p-5 flex flex-col gap-3 animate-fade-in">
-      <div className="flex items-start justify-between">
-        <div className={clsx('w-10 h-10 rounded-xl flex items-center justify-center', color)}>
-          <Icon className="w-5 h-5" />
-        </div>
-        {trend !== undefined && (
-          <span className={clsx(
-            'flex items-center gap-0.5 text-xs font-semibold px-2 py-0.5 rounded-full',
-            trend >= 0
-              ? 'bg-success-bg text-success'
-              : 'bg-danger-bg text-danger'
-          )}>
-            {trend >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-            {Math.abs(trend)}%
-          </span>
-        )}
-      </div>
-      <div>
-        <div className="text-2xl font-bold text-ink">{value}</div>
-        <div className="text-sm font-medium text-ink-secondary mt-0.5">{label}</div>
-        {sub && <div className="text-xs text-ink-muted mt-0.5">{sub}</div>}
-      </div>
-    </div>
-  )
-}
+import {
+  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend,
+} from 'recharts'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
-const DEPT_DATA = [
-  { dept: 'Finance',    count: 8 },
-  { dept: 'Operations', count: 12 },
-  { dept: 'Logistics',  count: 9 },
-  { dept: 'Sales & CRM',count: 7 },
-  { dept: 'HR',         count: 5 },
-  { dept: 'IT',         count: 4 },
-  { dept: 'Executive',  count: 2 },
-]
+const fmtRwf = (n: number) => new Intl.NumberFormat('en-RW', { maximumFractionDigits: 0 }).format(n) + ' RWF'
+const fmtShort = (n: number) => {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M'
+  if (n >= 1_000) return (n / 1_000).toFixed(0) + 'K'
+  return String(n)
+}
 
-const TOP_CUSTOMERS = [
-  { name: 'MTN Rwanda',   revenue: 18_500_000, invoices: 14, barW: 'w-full' },
-  { name: 'BK Group',     revenue: 12_200_000, invoices: 9,  barW: 'w-[66%]' },
-  { name: 'Equity Bank',  revenue: 8_750_000,  invoices: 7,  barW: 'w-[47%]' },
-  { name: 'Inyange Ind.', revenue: 5_300_000,  invoices: 5,  barW: 'w-[29%]' },
-  { name: 'Kigali City',  revenue: 3_900_000,  invoices: 4,  barW: 'w-[21%]' },
-]
-
-const MODULE_ACTIVITY = [
-  { name: 'Invoicing',  value: 38, color: '#22C55E', dot: 'bg-primary-500' },
-  { name: 'Inventory',  value: 24, color: '#3B82F6', dot: 'bg-blue-500' },
-  { name: 'Fleet',      value: 18, color: '#F59E0B', dot: 'bg-amber-500' },
-  { name: 'HR',         value: 12, color: '#A855F7', dot: 'bg-purple-500' },
-  { name: 'CRM',        value: 8,  color: '#EC4899', dot: 'bg-pink-500' },
-]
+const TAB_DESCRIPTIONS: Record<string, { title: string; subtitle: string }> = {
+  Main:       { title: 'Main Dashboard',     subtitle: 'Full business overview — revenue, people, fleet and inventory.' },
+  Unit:       { title: 'Unit Economics',     subtitle: 'Per-unit sales performance, pricing, returns and net unit metrics.' },
+  Marketing:  { title: 'Marketing KPIs',     subtitle: 'Customer acquisition, retention rates, CAC, LTV and conversion.' },
+  Investors:  { title: 'Investor View',      subtitle: 'ARR, MRR, burn rate, runway and gross margin for stakeholders.' },
+}
 
 export default function DashboardPage() {
-  const { token } = useAuth() as { token: string | null }
-  const [liveEvents, setLiveEvents] = useState<{ id: number; text: string; time: string; type: string }[]>([])
-  const [year] = useState(new Date().getFullYear())
+  const [activeTab, setActiveTab] = useState('Main')
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth())
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
 
-  const { data: ceo, isLoading, refetch } = useQuery({
-    queryKey: ['dashboard-ceo', year],
-    queryFn: () => dashboardApi.ceo(year).then(r => r.data),
-    staleTime: 30_000,
+  const { data: ceo } = useQuery({
+    queryKey: ['dashboard-ceo'],
+    queryFn: () => dashboardApi.ceo().then(r => r.data),
   })
 
-  const { data: revenue } = useQuery({
-    queryKey: ['revenue-monthly', year],
-    queryFn: () => invoicesApi.revenueByMonth(year).then(r => r.data),
+  const { data: revenueRaw } = useQuery({
+    queryKey: ['revenue-monthly'],
+    queryFn: () => invoicesApi.revenueByMonth(new Date().getFullYear()).then(r => r.data?.data ?? r.data ?? []),
   })
 
-  const addEvent = useCallback((text: string, type: string) => {
-    setLiveEvents(prev => [
-      { id: Date.now(), text, time: new Date().toLocaleTimeString(), type },
-      ...prev.slice(0, 19),
-    ])
-  }, [])
+  const { data: invoicesRaw } = useQuery({
+    queryKey: ['invoices'],
+    queryFn: () => invoicesApi.list({}).then(r => r.data?.data ?? r.data ?? []),
+  })
 
-  useEffect(() => {
-    if (!token) return
-    const ch = joinChannel('org:dashboard', token)
-    ch.on('invoice_created', p => addEvent(`New invoice #${p.number} created`, 'invoice'))
-    ch.on('invoice_approved', p => addEvent(`Invoice #${p.number} approved`, 'success'))
-    ch.on('stock_adjusted', p => addEvent(`Stock adjusted: ${p.item} (${p.delta > 0 ? '+' : ''}${p.delta})`, 'inventory'))
-    ch.on('payroll_processed', p => addEvent(`Payroll processed for ${p.period}`, 'payroll'))
-    ch.on('vehicle_location', p => addEvent(`Vehicle ${p.plate} updated position`, 'fleet'))
-    return () => { leaveChannel(ch) }
-  }, [token, addEvent])
+  const { data: employees } = useQuery({
+    queryKey: ['employees'],
+    queryFn: () => hrApi.employees().then(r => r.data?.data ?? r.data ?? []),
+  })
 
-  const revenueData = revenue?.data?.map((r: { month: number; total: number }) => ({
-    month: MONTHS[r.month - 1],
-    revenue: r.total,
-  })) ?? []
+  const { data: vehicles } = useQuery({
+    queryKey: ['vehicles'],
+    queryFn: () => fleetApi.vehicles().then(r => r.data?.data ?? r.data ?? []),
+  })
 
-  const invoiceStats = ceo?.invoice_stats ?? {}
-  const fleetStats = ceo?.fleet_stats ?? {}
-  const inventorySummary = ceo?.inventory_summary ?? {}
-  const hrStats = ceo?.hr_stats ?? {}
-  const crmStats = ceo?.crm_stats ?? {}
+  const { data: stockItems } = useQuery({
+    queryKey: ['stock-items'],
+    queryFn: () => inventoryApi.stockItems().then(r => r.data?.data ?? r.data ?? []),
+  })
+
+  const invoices: Record<string, unknown>[] = Array.isArray(invoicesRaw) ? invoicesRaw : []
+  const empList: Record<string, unknown>[] = Array.isArray(employees) ? employees : []
+  const vehicleList: Record<string, unknown>[] = Array.isArray(vehicles) ? vehicles : []
+  const itemList: Record<string, unknown>[] = Array.isArray(stockItems) ? stockItems : []
 
   const totalRevenue = ceo?.total_revenue ?? 0
-  const overdueAmount = ceo?.overdue_amount ?? 0
-  const overdueCount = ceo?.overdue_count ?? 0
+  const paidCount = ceo?.invoice_stats?.paid ?? invoices.filter(i => i.status === 'paid').length
+  const overdueCount = ceo?.invoice_stats?.pending ?? invoices.filter(i => i.status === 'overdue').length
+  const empCount = ceo?.hr_stats?.total ?? empList.length
+  const activeVehicles = ceo?.fleet_stats?.active ?? vehicleList.filter(v => v.status === 'active').length
+  const totalVehicles = ceo?.fleet_stats?.total ?? vehicleList.length
+  const lowStockCount = ceo?.inventory_summary?.low_stock ?? itemList.filter(i => Number(i.quantity) <= Number(i.reorder_point)).length
+
+  const monthlyData = MONTHS.map((name, idx) => {
+    const entry = Array.isArray(revenueRaw)
+      ? revenueRaw.find((r: Record<string, unknown>) => Number(r.month) === idx + 1)
+      : null
+    return { name, revenue: entry ? Number(entry.total ?? entry.amount ?? 0) : 0 }
+  })
+
+  const maxRevenue = Math.max(...monthlyData.map(d => d.revenue), 1)
+
+  const invoiceStatusData = [
+    { status: 'Paid',     count: ceo?.invoice_stats?.paid ?? invoices.filter(i => i.status === 'paid').length,     fill: '#10b981', dotClass: 'bg-emerald-500' },
+    { status: 'Pending',  count: ceo?.invoice_stats?.pending ?? invoices.filter(i => i.status === 'submitted').length, fill: '#f59e0b', dotClass: 'bg-amber-500' },
+    { status: 'Draft',    count: ceo?.invoice_stats?.draft ?? invoices.filter(i => i.status === 'draft').length,   fill: '#94a3b8', dotClass: 'bg-slate-400' },
+    { status: 'Overdue',  count: invoices.filter(i => i.status === 'overdue').length,                                fill: '#ef4444', dotClass: 'bg-red-500' },
+  ].filter(d => d.count > 0)
+
+  const fleetStatusData = [
+    { name: 'Active',      value: ceo?.fleet_stats?.active ?? vehicleList.filter(v => v.status === 'active').length,      fill: '#10b981' },
+    { name: 'Idle',        value: ceo?.fleet_stats?.idle ?? vehicleList.filter(v => v.status === 'idle').length,          fill: '#f59e0b' },
+    { name: 'Maintenance', value: ceo?.fleet_stats?.maintenance ?? vehicleList.filter(v => v.status === 'maintenance').length, fill: '#ef4444' },
+  ].filter(d => d.value > 0)
+
+  const deptData = Object.entries(
+    empList.reduce<Record<string, number>>((acc, emp) => {
+      const dept = String(emp.department || 'Other')
+      acc[dept] = (acc[dept] || 0) + 1
+      return acc
+    }, {})
+  ).map(([dept, count]) => ({ dept: dept.length > 10 ? dept.slice(0, 9) + '…' : dept, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 6)
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
-      <Topbar
-        title="CEO Dashboard"
-        subtitle={`Live overview · ${new Date().toLocaleDateString('en-RW', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`}
+    <div className="flex flex-col h-full overflow-hidden bg-slate-50">
+      <HeroHeader
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        selectedMonth={selectedMonth}
+        selectedYear={selectedYear}
+        onMonthChange={(m, y) => { setSelectedMonth(m); setSelectedYear(y) }}
       />
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
-        {/* Header row */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-bold text-ink">Business Overview</h2>
-            <p className="text-sm text-ink-muted">Real-time metrics across all modules</p>
-          </div>
-          <button onClick={() => refetch()} className="btn-ghost text-sm gap-2">
-            <RefreshCw className={clsx('w-4 h-4', isLoading && 'animate-spin')} />
-            Refresh
-          </button>
-        </div>
+      <div className="flex-1 overflow-y-auto p-5 space-y-5">
 
-        {/* KPI grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <KpiCard
-            label="Total Revenue"
-            value={fmtRwf(totalRevenue)}
-            sub={`${year} YTD`}
-            icon={DollarSign}
-            color="bg-primary-100 text-primary-600"
-            trend={12}
-          />
-          <KpiCard
-            label="Overdue Invoices"
-            value={fmtRwf(overdueAmount)}
-            sub={`${overdueCount} invoices`}
-            icon={AlertCircle}
-            color="bg-danger-bg text-danger"
-            trend={-5}
-          />
-          <KpiCard
-            label="Active Vehicles"
-            value={String(fleetStats.active ?? 0)}
-            sub={`${fleetStats.total ?? 0} total fleet`}
-            icon={Truck}
-            color="bg-blue-100 text-blue-600"
-          />
-          <KpiCard
-            label="Employees"
-            value={String(hrStats.total ?? 0)}
-            sub={`${hrStats.departments ?? 0} departments`}
-            icon={Users}
-            color="bg-purple-100 text-purple-600"
-            trend={3}
-          />
-        </div>
-
-        {/* Second KPI row */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <KpiCard
-            label="Paid Invoices"
-            value={String(invoiceStats.paid ?? 0)}
-            sub={`${invoiceStats.draft ?? 0} drafts · ${invoiceStats.pending ?? 0} pending`}
-            icon={TrendingUp}
-            color="bg-primary-100 text-primary-600"
-          />
-          <KpiCard
-            label="Stock Items"
-            value={String(inventorySummary.total_items ?? 0)}
-            sub={`${inventorySummary.low_stock ?? 0} low stock alerts`}
-            icon={Package}
-            color="bg-orange-100 text-orange-600"
-          />
-          <KpiCard
-            label="Customers"
-            value={String(crmStats.total ?? 0)}
-            sub={`${crmStats.active ?? 0} active accounts`}
-            icon={ShoppingCart}
-            color="bg-info-bg text-info"
-          />
-          <KpiCard
-            label="Pending Payrolls"
-            value={String(hrStats.pending_payroll ?? 0)}
-            sub="Awaiting approval"
-            icon={Clock}
-            color="bg-warning-bg text-warning"
-          />
-        </div>
-
-        {/* Charts row */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Revenue chart */}
-          <div className="card p-5 lg:col-span-2">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="font-semibold text-ink">Monthly Revenue</h3>
-                <p className="text-xs text-ink-muted">{year} — RWF</p>
+        {/* ── Non-Main tab placeholder views ──────── */}
+        {activeTab !== 'Main' && (
+          <div className="space-y-5">
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center shrink-0">
+                  <BarChart2 className="w-6 h-6 text-orange-500" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900">{TAB_DESCRIPTIONS[activeTab]?.title}</h2>
+                  <p className="text-sm text-slate-500">{TAB_DESCRIPTIONS[activeTab]?.subtitle}</p>
+                </div>
               </div>
-              <span className="badge-green text-xs">Live</span>
+              {activeTab === 'Unit' && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-700 mb-3">Monthly Units Sold</h3>
+                    <ResponsiveContainer width="100%" height={200}>
+                      <BarChart data={monthlyData.map(d => ({ ...d, units: Math.round(d.revenue / 94500) }))}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                        <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={36} />
+                        <Tooltip formatter={(v: number) => [`${v} units`, 'Units Sold']} contentStyle={{ borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 12 }} />
+                        <Bar dataKey="units" fill="#f97316" radius={[6, 6, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="space-y-3">
+                    {[
+                      { label: 'Total Units Sold',   value: monthlyData.reduce((s, d) => s + Math.round(d.revenue / 94500), 0).toLocaleString(), color: 'text-orange-600', bg: 'bg-orange-50' },
+                      { label: 'Average Unit Price',  value: '94,500 RWF',   color: 'text-blue-600',    bg: 'bg-blue-50' },
+                      { label: 'Units Returned',      value: '142',           color: 'text-red-600',     bg: 'bg-red-50' },
+                      { label: 'Net Units Delivered', value: monthlyData.reduce((s, d) => s + Math.round(d.revenue / 94500), 0).toLocaleString(), color: 'text-emerald-600', bg: 'bg-emerald-50' },
+                    ].map(({ label, value, color, bg }) => (
+                      <div key={label} className={clsx('rounded-xl p-4 flex items-center justify-between', bg)}>
+                        <span className="text-sm font-medium text-slate-700">{label}</span>
+                        <span className={clsx('text-lg font-extrabold', color)}>{value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {activeTab === 'Marketing' && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-700 mb-3">New Customers — Monthly</h3>
+                    <ResponsiveContainer width="100%" height={200}>
+                      <AreaChart data={monthlyData.map(d => ({ ...d, customers: Math.round(d.revenue / 3800) }))}>
+                        <defs>
+                          <linearGradient id="mktGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%"  stopColor="#f97316" stopOpacity={0.25} />
+                            <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                        <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={36} />
+                        <Tooltip formatter={(v: number) => [`${v} customers`, 'Acquired']} contentStyle={{ borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 12 }} />
+                        <Area type="monotone" dataKey="customers" stroke="#f97316" strokeWidth={2.5} fill="url(#mktGrad)" dot={false} activeDot={{ r: 5, fill: '#f97316', stroke: '#fff', strokeWidth: 2 }} />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="space-y-3">
+                    {[
+                      { label: 'New Customers',   value: '318',    color: 'text-orange-600',  bg: 'bg-orange-50' },
+                      { label: 'Retention Rate',  value: '87.3%',  color: 'text-emerald-600', bg: 'bg-emerald-50' },
+                      { label: 'Avg. CAC',        value: '43,200 RWF', color: 'text-red-600', bg: 'bg-red-50' },
+                      { label: 'Customer LTV',    value: '612,000 RWF', color: 'text-blue-600', bg: 'bg-blue-50' },
+                      { label: 'Conversion Rate', value: '6.4%',   color: 'text-purple-600',  bg: 'bg-purple-50' },
+                    ].map(({ label, value, color, bg }) => (
+                      <div key={label} className={clsx('rounded-xl p-4 flex items-center justify-between', bg)}>
+                        <span className="text-sm font-medium text-slate-700">{label}</span>
+                        <span className={clsx('text-lg font-extrabold', color)}>{value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {activeTab === 'Investors' && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-700 mb-3">MRR Growth</h3>
+                    <ResponsiveContainer width="100%" height={200}>
+                      <AreaChart data={monthlyData.map((d, i) => ({ ...d, mrr: Math.round((totalRevenue / 12) * (1 + i * 0.04)) }))}>
+                        <defs>
+                          <linearGradient id="invGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%"  stopColor="#8b5cf6" stopOpacity={0.25} />
+                            <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                        <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                        <YAxis tickFormatter={n => fmtShort(n)} tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={44} />
+                        <Tooltip formatter={(v: number) => [fmtRwf(v), 'MRR']} contentStyle={{ borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 12 }} />
+                        <Area type="monotone" dataKey="mrr" stroke="#8b5cf6" strokeWidth={2.5} fill="url(#invGrad)" dot={false} activeDot={{ r: 5, fill: '#8b5cf6', stroke: '#fff', strokeWidth: 2 }} />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="space-y-3">
+                    {[
+                      { label: 'ARR',          value: fmtShort(totalRevenue * 1.12) + ' RWF', color: 'text-purple-600', bg: 'bg-purple-50' },
+                      { label: 'MRR',          value: fmtShort(totalRevenue / 12) + ' RWF',   color: 'text-blue-600',   bg: 'bg-blue-50' },
+                      { label: 'Burn Rate',    value: '124,000 RWF/mo',                        color: 'text-red-600',    bg: 'bg-red-50' },
+                      { label: 'Runway',       value: '18 months',                             color: 'text-emerald-600',bg: 'bg-emerald-50' },
+                      { label: 'Gross Margin', value: '68.2%',                                 color: 'text-orange-600', bg: 'bg-orange-50' },
+                    ].map(({ label, value, color, bg }) => (
+                      <div key={label} className={clsx('rounded-xl p-4 flex items-center justify-between', bg)}>
+                        <span className="text-sm font-medium text-slate-700">{label}</span>
+                        <span className={clsx('text-base font-extrabold', color)}>{value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'Main' && <>
+
+        {/* ── Top KPI cards ───────────────────────── */}
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+          {[
+            {
+              label: 'Total Revenue',
+              value: fmtShort(totalRevenue) + ' RWF',
+              icon: DollarSign,
+              color: 'bg-orange-500',
+              change: '+9.56%',
+              positive: true,
+            },
+            {
+              label: 'Invoices Paid',
+              value: String(paidCount),
+              icon: CheckCircle,
+              color: 'bg-emerald-500',
+              change: overdueCount > 0 ? `${overdueCount} overdue` : 'All clear',
+              positive: overdueCount === 0,
+            },
+            {
+              label: 'Employees',
+              value: String(empCount),
+              icon: Users,
+              color: 'bg-blue-500',
+              change: `${ceo?.hr_stats?.departments ?? '—'} depts`,
+              positive: true,
+            },
+            {
+              label: 'Fleet Active',
+              value: `${activeVehicles}/${totalVehicles}`,
+              icon: Truck,
+              color: 'bg-violet-500',
+              change: `${ceo?.fleet_stats?.gps_active ?? '—'} GPS live`,
+              positive: true,
+            },
+            {
+              label: 'Low Stock Alerts',
+              value: String(lowStockCount),
+              icon: AlertTriangle,
+              color: lowStockCount > 0 ? 'bg-red-500' : 'bg-slate-400',
+              change: `${ceo?.inventory_summary?.total_items ?? itemList.length} total items`,
+              positive: lowStockCount === 0,
+            },
+          ].map(({ label, value, icon: Icon, color, change, positive }) => (
+            <div key={label} className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{label}</span>
+                <div className={clsx('w-8 h-8 rounded-xl flex items-center justify-center shrink-0', color)}>
+                  <Icon className="w-4 h-4 text-white" />
+                </div>
+              </div>
+              <div className="text-2xl font-extrabold text-slate-900 leading-none">{value}</div>
+              <div className={clsx('flex items-center gap-1 text-xs font-semibold', positive ? 'text-emerald-600' : 'text-red-500')}>
+                {positive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                {change}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Revenue trend + Invoice status ───────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+          {/* Revenue area chart — large */}
+          <div className="lg:col-span-2 bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h2 className="text-base font-bold text-slate-900">Revenue Trend</h2>
+                <p className="text-xs text-slate-500 mt-0.5">Monthly revenue — current year</p>
+              </div>
+              <div className="flex items-center gap-1.5 bg-orange-50 text-orange-700 text-xs font-bold px-3 py-1.5 rounded-xl">
+                <TrendingUp className="w-3.5 h-3.5" />
+                {fmtShort(totalRevenue)} RWF YTD
+              </div>
             </div>
             <ResponsiveContainer width="100%" height={220}>
-              <AreaChart data={revenueData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+              <AreaChart data={monthlyData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
                 <defs>
-                  <linearGradient id="revGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#22C55E" stopOpacity={0.25} />
-                    <stop offset="95%" stopColor="#22C55E" stopOpacity={0} />
+                  <linearGradient id="dashRevGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f97316" stopOpacity={0.25} />
+                    <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
-                <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} tickFormatter={v => fmt(v)} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                <YAxis tickFormatter={n => fmtShort(n)} tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={44} />
                 <Tooltip
-                  contentStyle={{ background: '#0F172A', border: '1px solid #1E293B', borderRadius: 10, fontSize: 12 }}
-                  labelStyle={{ color: '#94A3B8' }}
-                  itemStyle={{ color: '#22C55E' }}
                   formatter={(v: number) => [fmtRwf(v), 'Revenue']}
+                  contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
                 />
-                <Area type="monotone" dataKey="revenue" stroke="#22C55E" strokeWidth={2} fill="url(#revGradient)" />
+                <Area type="monotone" dataKey="revenue" stroke="#f97316" strokeWidth={2.5} fill="url(#dashRevGrad)" dot={false} activeDot={{ r: 5, fill: '#f97316', strokeWidth: 2, stroke: '#fff' }} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
 
-          {/* Invoice status breakdown */}
-          <div className="card p-5">
-            <h3 className="font-semibold text-ink mb-4">Invoice Status</h3>
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart
-                data={[
-                  { name: 'Draft', value: invoiceStats.draft ?? 0, fill: '#94A3B8' },
-                  { name: 'Pending', value: invoiceStats.pending ?? 0, fill: '#F59E0B' },
-                  { name: 'Paid', value: invoiceStats.paid ?? 0, fill: '#22C55E' },
-                  { name: 'Overdue', value: overdueCount, fill: '#EF4444' },
-                ]}
-                margin={{ top: 5, right: 5, left: -20, bottom: 0 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
-                <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 10, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
-                <Tooltip
-                  contentStyle={{ background: '#0F172A', border: '1px solid #1E293B', borderRadius: 10, fontSize: 12 }}
-                  itemStyle={{ color: '#E2E8F0' }}
-                />
-                <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-                  {['#94A3B8', '#F59E0B', '#22C55E', '#EF4444'].map((color, idx) => (
-                    <Cell key={idx} fill={color} />
+          {/* Invoice status donut */}
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+            <div className="mb-5">
+              <h2 className="text-base font-bold text-slate-900">Invoice Status</h2>
+              <p className="text-xs text-slate-500 mt-0.5">Breakdown by current state</p>
+            </div>
+            {invoiceStatusData.length === 0 ? (
+              <div className="h-[220px] flex flex-col items-center justify-center text-slate-400">
+                <FileText className="w-10 h-10 mb-2 opacity-30" />
+                <p className="text-sm">No invoices yet</p>
+              </div>
+            ) : (
+              <>
+                <ResponsiveContainer width="100%" height={160}>
+                  <PieChart>
+                    <Pie data={invoiceStatusData} cx="50%" cy="50%" innerRadius={45} outerRadius={72} dataKey="count" paddingAngle={3} strokeWidth={2} stroke="#fff">
+                      {invoiceStatusData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
+                    </Pie>
+                    <Tooltip formatter={(v: number, name: string) => [`${v} invoices`, name]} contentStyle={{ borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 12 }} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="space-y-2 mt-3">
+                  {invoiceStatusData.map(d => (
+                    <div key={d.status} className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className={clsx('w-2.5 h-2.5 rounded-full shrink-0', d.dotClass)} />
+                        <span className="text-slate-600 font-medium">{d.status}</span>
+                      </div>
+                      <span className="font-bold text-slate-900">{d.count}</span>
+                    </div>
                   ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
-        {/* ── Department headcount + module activity ──────── */}
+        {/* ── Dept headcount + Fleet status + Recent invoices ── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="card p-5 lg:col-span-2">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="font-semibold text-ink">Headcount by Department</h3>
-                <p className="text-xs text-ink-muted">Current staff distribution</p>
+
+          {/* Department headcount bar */}
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+            <div className="mb-4">
+              <h2 className="text-base font-bold text-slate-900">Team by Department</h2>
+              <p className="text-xs text-slate-500 mt-0.5">{empCount} employees across {ceo?.hr_stats?.departments ?? deptData.length} teams</p>
+            </div>
+            {deptData.length === 0 ? (
+              <div className="h-[180px] flex items-center justify-center text-slate-400 text-sm">
+                <Users className="w-8 h-8 mr-2 opacity-30" />No data
               </div>
-              <div className="flex items-center gap-1.5 text-xs text-ink-muted">
-                <Building2 className="w-3.5 h-3.5" />
-                {DEPT_DATA.reduce((s, d) => s + d.count, 0)} total
+            ) : (
+              <ResponsiveContainer width="100%" height={180}>
+                <BarChart data={deptData} layout="vertical" margin={{ top: 0, right: 8, bottom: 0, left: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                  <XAxis type="number" allowDecimals={false} tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                  <YAxis type="category" dataKey="dept" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} width={70} />
+                  <Tooltip formatter={(v: number) => [`${v} employees`, 'Headcount']} contentStyle={{ borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 12 }} />
+                  <Bar dataKey="count" fill="#f97316" radius={[0, 6, 6, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+
+          {/* Fleet status donut */}
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+            <div className="mb-4">
+              <h2 className="text-base font-bold text-slate-900">Fleet Overview</h2>
+              <p className="text-xs text-slate-500 mt-0.5">{totalVehicles} vehicles · {activeVehicles} active</p>
+            </div>
+            {fleetStatusData.length === 0 ? (
+              <div className="h-[180px] flex items-center justify-center text-slate-400 text-sm">
+                <Truck className="w-8 h-8 mr-2 opacity-30" />No vehicles
+              </div>
+            ) : (
+              <>
+                <ResponsiveContainer width="100%" height={140}>
+                  <PieChart>
+                    <Pie data={fleetStatusData} cx="50%" cy="50%" innerRadius={42} outerRadius={65} dataKey="value" paddingAngle={4} strokeWidth={2} stroke="#fff">
+                      {fleetStatusData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
+                    </Pie>
+                    <Tooltip formatter={(v: number, name: string) => [`${v} vehicles`, name]} contentStyle={{ borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 12 }} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="flex flex-wrap gap-x-4 gap-y-1.5 justify-center mt-2">
+                  {fleetStatusData.map(d => (
+                    <div key={d.name} className="flex items-center gap-1.5 text-xs text-slate-500">
+                      <span className={clsx(
+                        'w-2 h-2 rounded-full',
+                        d.name === 'Active' ? 'bg-emerald-500' : d.name === 'Idle' ? 'bg-amber-500' : 'bg-red-500',
+                      )} />
+                      {d.name} <span className="font-bold text-slate-800">{d.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Recent invoices */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+            <div className="p-5 pb-3">
+              <h2 className="text-base font-bold text-slate-900">Recent Invoices</h2>
+              <p className="text-xs text-slate-500 mt-0.5">Latest billing activity</p>
+            </div>
+            <div className="divide-y divide-slate-50">
+              {invoices.length === 0 ? (
+                <div className="py-10 text-center text-slate-400">
+                  <FileText className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                  <p className="text-sm">No invoices yet</p>
+                </div>
+              ) : invoices.slice(0, 5).map(inv => (
+                <div key={String(inv.id)} className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50 transition-colors">
+                  <div className={clsx(
+                    'w-2 h-2 rounded-full shrink-0',
+                    inv.status === 'paid' ? 'bg-emerald-500'
+                      : inv.status === 'overdue' ? 'bg-red-500'
+                      : inv.status === 'submitted' ? 'bg-amber-500'
+                      : 'bg-slate-300',
+                  )} />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-slate-800 truncate">{String(inv.customer_name ?? '—')}</div>
+                    <div className="text-xs text-slate-400 capitalize">{String(inv.status)}</div>
+                  </div>
+                  <div className="text-sm font-bold text-slate-900 shrink-0">
+                    {fmtShort(Number(inv.total_amount ?? 0))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Monthly bar chart full width ─────────── */}
+        {monthlyData.some(d => d.revenue > 0) && (
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h2 className="text-base font-bold text-slate-900">Monthly Revenue Breakdown</h2>
+                <p className="text-xs text-slate-500 mt-0.5">Bar view — each month&apos;s collected revenue</p>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                <BarChart2 className="w-3.5 h-3.5" />
+                Peak: {fmtShort(maxRevenue)} RWF
               </div>
             </div>
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart layout="vertical" data={DEPT_DATA} margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 10, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
-                <YAxis type="category" dataKey="dept" tick={{ fontSize: 11, fill: '#64748B' }} axisLine={false} tickLine={false} width={80} />
-                <Tooltip
-                  contentStyle={{ background: '#0F172A', border: '1px solid #1E293B', borderRadius: 8, fontSize: 12 }}
-                  itemStyle={{ color: '#22C55E' }}
-                  formatter={(v: number) => [v, 'Employees']}
-                />
-                <Bar dataKey="count" fill="#22C55E" radius={[0, 6, 6, 0]} />
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={monthlyData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                <YAxis tickFormatter={n => fmtShort(n)} tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={44} />
+                <Tooltip formatter={(v: number) => [fmtRwf(v), 'Revenue']} contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }} />
+                <Bar dataKey="revenue" radius={[6, 6, 0, 0]} fill="#f97316" />
               </BarChart>
             </ResponsiveContainer>
           </div>
+        )}
 
-          <div className="card p-5">
-            <h3 className="font-semibold text-ink mb-4">Module Activity</h3>
-            <div className="flex justify-center mb-4">
-              <ResponsiveContainer width={140} height={140}>
-                <PieChart>
-                  <Pie
-                    data={MODULE_ACTIVITY}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={42}
-                    outerRadius={62}
-                    dataKey="value"
-                    strokeWidth={0}
-                  >
-                    {MODULE_ACTIVITY.map((entry, i) => (
-                      <Cell key={i} fill={entry.color} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="space-y-2">
-              {MODULE_ACTIVITY.map(m => (
-                <div key={m.name} className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2">
-                    <span className={clsx('w-2 h-2 rounded-full shrink-0', m.dot)} />
-                    <span className="text-ink-secondary">{m.name}</span>
-                  </div>
-                  <span className="font-semibold text-ink">{m.value}%</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+        </>}
 
-        {/* ── Fleet + live feed ────────────────────────────── */}
-        {/* Bottom row: fleet + live feed */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Fleet status */}
-          <div className="card p-5">
-            <h3 className="font-semibold text-ink mb-4">Fleet Status</h3>
-            <div className="space-y-3">
-              {[
-                { label: 'Active', value: fleetStats.active ?? 0, color: 'bg-primary-500', pct: fleetStats.total ? ((fleetStats.active ?? 0) / fleetStats.total * 100) : 0 },
-                { label: 'Idle', value: fleetStats.idle ?? 0, color: 'bg-warning', pct: fleetStats.total ? ((fleetStats.idle ?? 0) / fleetStats.total * 100) : 0 },
-                { label: 'Maintenance', value: fleetStats.maintenance ?? 0, color: 'bg-danger', pct: fleetStats.total ? ((fleetStats.maintenance ?? 0) / fleetStats.total * 100) : 0 },
-              ].map(({ label, value, color, pct }) => (
-                <div key={label}>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-ink-secondary">{label}</span>
-                    <span className="font-semibold text-ink">{value}</span>
-                  </div>
-                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <div className={clsx('h-full rounded-full transition-all', color)} style={{ width: `${pct}%` }} />
-                  </div>
-                </div>
-              ))}
-              <div className="pt-2 border-t border-slate-100 flex justify-between text-xs text-ink-muted">
-                <span>Total fleet: <strong className="text-ink">{fleetStats.total ?? 0}</strong></span>
-                <span>GPS active: <strong className="text-primary-600">{fleetStats.gps_active ?? 0}</strong></span>
-              </div>
-            </div>
-          </div>
-
-          {/* Live activity feed */}
-          <div className="card p-5 flex flex-col">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-ink">Live Activity</h3>
-              <span className="flex items-center gap-1.5 text-xs text-primary-600">
-                <Activity className="w-3 h-3" />
-                Real-time
-              </span>
-            </div>
-            <div className="flex-1 overflow-y-auto space-y-2 max-h-48 no-scrollbar">
-              {liveEvents.length === 0 ? (
-                <div className="text-center py-8 text-ink-muted text-sm">
-                  <Activity className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                  Waiting for live events…
-                </div>
-              ) : liveEvents.map(ev => (
-                <div key={ev.id} className="flex items-start gap-2.5 py-1.5 border-b border-slate-50 last:border-0 animate-fade-in">
-                  <div className={clsx('w-1.5 h-1.5 rounded-full mt-1.5 shrink-0', {
-                    'bg-primary-500': ev.type === 'invoice' || ev.type === 'success',
-                    'bg-orange-400': ev.type === 'inventory',
-                    'bg-purple-400': ev.type === 'payroll',
-                    'bg-blue-400': ev.type === 'fleet',
-                  })} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-ink">{ev.text}</p>
-                    <p className="text-[10px] text-ink-muted">{ev.time}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* ── Top customers ────────────────────────────────── */}
-        <div className="card p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="font-semibold text-ink">Top Customers by Revenue</h3>
-              <p className="text-xs text-ink-muted">{new Date().getFullYear()} YTD</p>
-            </div>
-            <Star className="w-4 h-4 text-amber-400" />
-          </div>
-          <div className="space-y-0 divide-y divide-slate-50">
-            {TOP_CUSTOMERS.map((c, i) => (
-              <div key={c.name} className="flex items-center gap-4 py-2.5">
-                <span className="w-5 text-xs font-bold text-ink-muted text-center shrink-0">{i + 1}</span>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium text-ink truncate">{c.name}</span>
-                    <span className="text-xs font-semibold text-ink shrink-0 ml-3">{fmtRwf(c.revenue)}</span>
-                  </div>
-                  <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div className={clsx('h-full bg-gradient-to-r from-primary-500 to-primary-400 rounded-full transition-all', c.barW)} />
-                  </div>
-                </div>
-                <span className="text-xs text-ink-muted shrink-0">{c.invoices} inv.</span>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
     </div>
   )

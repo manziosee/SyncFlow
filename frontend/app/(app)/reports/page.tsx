@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { reportsApi } from '@/lib/api'
-import Topbar from '@/components/layout/Topbar'
+import PageHeroHeader from '@/components/dashboard/PageHeroHeader'
 import {
   BarChart3, FileText, DollarSign, Package, Truck,
   Users, AlertTriangle, Play, Clock, CheckCircle,
@@ -171,7 +171,16 @@ export default function ReportsPage() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <Topbar title="Reports" subtitle="Generate and export business reports" />
+      <PageHeroHeader
+        title="Reports"
+        highlight="Reports"
+        subtitle="Generate and export business intelligence reports"
+        imageIndex={0}
+        stats={[
+          { label: 'generated', value: 148 },
+          { label: 'this month', value: 12, positive: true },
+        ]}
+      />
 
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
 

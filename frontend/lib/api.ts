@@ -105,6 +105,14 @@ export const inventoryApi = {
     isDemo() ? fakeOk() : api.post(`/api/inventory/stock-items/${id}/adjust`, data),
   transferStock: (id: string, data: Record<string, unknown>) =>
     isDemo() ? fakeOk() : api.post(`/api/inventory/stock-items/${id}/transfer`, data),
+  updateStockItem: (id: string, data: Record<string, unknown>) =>
+    isDemo() ? fakeOk() : api.put(`/api/inventory/stock-items/${id}`, data),
+  deleteStockItem: (id: string) =>
+    isDemo() ? fakeOk() : api.delete(`/api/inventory/stock-items/${id}`),
+  updateWarehouse: (id: string, data: Record<string, unknown>) =>
+    isDemo() ? fakeOk() : api.put(`/api/inventory/warehouses/${id}`, data),
+  deleteWarehouse: (id: string) =>
+    isDemo() ? fakeOk() : api.delete(`/api/inventory/warehouses/${id}`),
   lowStock: (warehouse_id?: string) =>
     isDemo()
       ? fake(M.MOCK_LOW_STOCK)
@@ -141,6 +149,10 @@ export const hrApi = {
     isDemo() ? fakeOk() : api.post(`/api/hr/payroll/${id}/approve`),
   paySlips: (runId: string) =>
     isDemo() ? fake(M.MOCK_PAY_SLIPS) : api.get(`/api/hr/payroll/${runId}/pay-slips`),
+  deleteEmployee: (id: string) =>
+    isDemo() ? fakeOk() : api.delete(`/api/hr/employees/${id}`),
+  deletePayrollRun: (id: string) =>
+    isDemo() ? fakeOk() : api.delete(`/api/hr/payroll/${id}`),
 }
 
 // ─── CRM ──────────────────────────────────────────────────────

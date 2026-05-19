@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { aiApi } from '@/lib/api'
-import Topbar from '@/components/layout/Topbar'
+import PageHeroHeader from '@/components/dashboard/PageHeroHeader'
 import { Brain, Send, Loader2, Zap, RefreshCw, Copy, User } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import toast from 'react-hot-toast'
@@ -192,7 +192,12 @@ export default function AIPage() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <Topbar title="AI Assistant" subtitle="Natural language commands for SyncFlow" />
+      <PageHeroHeader
+        title="Shortcuts & AI"
+        highlight="AI"
+        subtitle="Natural language commands — ask anything about your business"
+        imageIndex={5}
+      />
 
       <div className="flex-1 flex overflow-hidden">
         {/* Chat area */}
