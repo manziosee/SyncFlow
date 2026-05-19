@@ -10,8 +10,8 @@ export default function LandingPage() {
     <div className="min-h-screen bg-white font-sans antialiased">
 
       {/* ─── NAV ──────────────────────────────────────────────── */}
-      <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-xl border-b border-slate-100/80">
-        <div className="max-w-6xl mx-auto px-6 h-16 grid grid-cols-3 items-center">
+      <nav className="sticky top-0 z-50 py-3 px-4 sm:px-6">
+        <div className="max-w-5xl mx-auto bg-white/95 backdrop-blur-xl border border-slate-200/80 rounded-2xl shadow-sm shadow-slate-200/40 px-6 h-14 grid grid-cols-3 items-center">
 
           {/* Left — Logo */}
           <div className="flex items-center gap-2.5">

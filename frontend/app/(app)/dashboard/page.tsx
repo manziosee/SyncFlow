@@ -4,12 +4,12 @@ import { useEffect, useState, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  AreaChart, Area
+  AreaChart, Area, PieChart, Pie,
 } from 'recharts'
 import {
   TrendingUp, AlertCircle, Truck, Users, Package,
   DollarSign, Activity, RefreshCw, ArrowUpRight, ArrowDownRight,
-  ShoppingCart, Clock
+  ShoppingCart, Clock, Building2, Star,
 } from 'lucide-react'
 import { dashboardApi, invoicesApi } from '@/lib/api'
 import { useAuth } from '@/lib/auth-context'
@@ -64,6 +64,32 @@ function KpiCard({ label, value, sub, icon: Icon, color, trend }: KpiCardProps) 
 }
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+const DEPT_DATA = [
+  { dept: 'Finance',    count: 8 },
+  { dept: 'Operations', count: 12 },
+  { dept: 'Logistics',  count: 9 },
+  { dept: 'Sales & CRM',count: 7 },
+  { dept: 'HR',         count: 5 },
+  { dept: 'IT',         count: 4 },
+  { dept: 'Executive',  count: 2 },
+]
+
+const TOP_CUSTOMERS = [
+  { name: 'MTN Rwanda',   revenue: 18_500_000, invoices: 14, barW: 'w-full' },
+  { name: 'BK Group',     revenue: 12_200_000, invoices: 9,  barW: 'w-[66%]' },
+  { name: 'Equity Bank',  revenue: 8_750_000,  invoices: 7,  barW: 'w-[47%]' },
+  { name: 'Inyange Ind.', revenue: 5_300_000,  invoices: 5,  barW: 'w-[29%]' },
+  { name: 'Kigali City',  revenue: 3_900_000,  invoices: 4,  barW: 'w-[21%]' },
+]
+
+const MODULE_ACTIVITY = [
+  { name: 'Invoicing',  value: 38, color: '#22C55E', dot: 'bg-primary-500' },
+  { name: 'Inventory',  value: 24, color: '#3B82F6', dot: 'bg-blue-500' },
+  { name: 'Fleet',      value: 18, color: '#F59E0B', dot: 'bg-amber-500' },
+  { name: 'HR',         value: 12, color: '#A855F7', dot: 'bg-purple-500' },
+  { name: 'CRM',        value: 8,  color: '#EC4899', dot: 'bg-pink-500' },
+]
 
 export default function DashboardPage() {
   const { token } = useAuth() as { token: string | null }
@@ -264,6 +290,70 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* ── Department headcount + module activity ──────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="card p-5 lg:col-span-2">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="font-semibold text-ink">Headcount by Department</h3>
+                <p className="text-xs text-ink-muted">Current staff distribution</p>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-ink-muted">
+                <Building2 className="w-3.5 h-3.5" />
+                {DEPT_DATA.reduce((s, d) => s + d.count, 0)} total
+              </div>
+            </div>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart layout="vertical" data={DEPT_DATA} margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 10, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
+                <YAxis type="category" dataKey="dept" tick={{ fontSize: 11, fill: '#64748B' }} axisLine={false} tickLine={false} width={80} />
+                <Tooltip
+                  contentStyle={{ background: '#0F172A', border: '1px solid #1E293B', borderRadius: 8, fontSize: 12 }}
+                  itemStyle={{ color: '#22C55E' }}
+                  formatter={(v: number) => [v, 'Employees']}
+                />
+                <Bar dataKey="count" fill="#22C55E" radius={[0, 6, 6, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="card p-5">
+            <h3 className="font-semibold text-ink mb-4">Module Activity</h3>
+            <div className="flex justify-center mb-4">
+              <ResponsiveContainer width={140} height={140}>
+                <PieChart>
+                  <Pie
+                    data={MODULE_ACTIVITY}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={42}
+                    outerRadius={62}
+                    dataKey="value"
+                    strokeWidth={0}
+                  >
+                    {MODULE_ACTIVITY.map((entry, i) => (
+                      <Cell key={i} fill={entry.color} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="space-y-2">
+              {MODULE_ACTIVITY.map(m => (
+                <div key={m.name} className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className={clsx('w-2 h-2 rounded-full shrink-0', m.dot)} />
+                    <span className="text-ink-secondary">{m.name}</span>
+                  </div>
+                  <span className="font-semibold text-ink">{m.value}%</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Fleet + live feed ────────────────────────────── */}
         {/* Bottom row: fleet + live feed */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Fleet status */}
@@ -322,6 +412,34 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+
+        {/* ── Top customers ────────────────────────────────── */}
+        <div className="card p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="font-semibold text-ink">Top Customers by Revenue</h3>
+              <p className="text-xs text-ink-muted">{new Date().getFullYear()} YTD</p>
+            </div>
+            <Star className="w-4 h-4 text-amber-400" />
+          </div>
+          <div className="space-y-0 divide-y divide-slate-50">
+            {TOP_CUSTOMERS.map((c, i) => (
+              <div key={c.name} className="flex items-center gap-4 py-2.5">
+                <span className="w-5 text-xs font-bold text-ink-muted text-center shrink-0">{i + 1}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-medium text-ink truncate">{c.name}</span>
+                    <span className="text-xs font-semibold text-ink shrink-0 ml-3">{fmtRwf(c.revenue)}</span>
+                  </div>
+                  <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div className={clsx('h-full bg-gradient-to-r from-primary-500 to-primary-400 rounded-full transition-all', c.barW)} />
+                  </div>
+                </div>
+                <span className="text-xs text-ink-muted shrink-0">{c.invoices} inv.</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>
