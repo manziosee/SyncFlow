@@ -157,6 +157,12 @@
   .status-dot-yellow { @apply status-dot bg-warning; }
   .status-dot-gray   { @apply status-dot bg-slate-400; }
 
+  /* Map placeholder dot-grid */
+  .map-dot-grid {
+    background-image: radial-gradient(circle, #fff 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+
   /* Sidebar gradient background */
   .sidebar-bg {
     background: linear-gradient(180deg, #0B1120 0%, #0F172A 100%);
