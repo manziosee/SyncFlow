@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { inventoryApi } from '@/lib/api'
-import Topbar from '@/components/layout/Topbar'
+import PageHeroHeader, { HeroButton } from '@/components/dashboard/PageHeroHeader'
 import {
   Package, Warehouse, AlertTriangle, Plus, Search,
   ArrowRightLeft, TrendingDown, Loader2, RefreshCw, X
@@ -185,8 +185,22 @@ export default function InventoryPage() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <Topbar title="Inventory" subtitle="Warehouses & stock management" />
-
+      <PageHeroHeader
+        title="Inventory"
+        highlight="Inventory"
+        subtitle="Warehouses, stock levels & reorder management"
+        imageIndex={1}
+        stats={[
+          { label: 'items', value: items.length },
+          { label: 'low stock', value: lowStock.length, positive: lowStock.length === 0 },
+        ]}
+        actions={
+          <HeroButton variant="orange" onClick={() => setShowAdd(true)}>
+            <Plus className="w-3.5 h-3.5" />
+            Add Item
+          </HeroButton>
+        }
+      />
       <div className="flex-1 overflow-y-auto p-6 space-y-4">
         {/* KPI strip */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">

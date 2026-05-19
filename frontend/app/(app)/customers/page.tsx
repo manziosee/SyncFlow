@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { crmApi } from '@/lib/api'
-import Topbar from '@/components/layout/Topbar'
+import PageHeroHeader, { HeroButton } from '@/components/dashboard/PageHeroHeader'
 import {
   ShoppingCart, MessageSquare, Plus, Search,
   Loader2, RefreshCw, X, User, Globe, Phone, Mail
@@ -219,8 +219,22 @@ export default function CustomersPage() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <Topbar title="Customers" subtitle="CRM & interaction tracking" />
-
+      <PageHeroHeader
+        title="Investors & CRM"
+        highlight="Investors"
+        subtitle="Customer relationships, interactions & pipeline tracking"
+        imageIndex={3}
+        stats={[
+          { label: 'total', value: statsData?.total ?? customers.length },
+          { label: 'active', value: statsData?.active ?? customers.filter(c => c.status === 'active').length, positive: true },
+        ]}
+        actions={
+          <HeroButton variant="orange" onClick={() => setShowAdd(true)}>
+            <Plus className="w-3.5 h-3.5" />
+            Add Customer
+          </HeroButton>
+        }
+      />
       <div className="flex-1 overflow-y-auto p-6 space-y-4">
         {/* Stats strip */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

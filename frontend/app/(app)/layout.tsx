@@ -8,7 +8,7 @@ import Sidebar from '@/components/layout/Sidebar'
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth()
   const router = useRouter()
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed] = useState(true)
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {

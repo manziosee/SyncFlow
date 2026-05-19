@@ -2,9 +2,9 @@
 
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Search, Filter, Eye, CheckCircle, XCircle, FileText, RefreshCw, Loader2 } from 'lucide-react'
+import { Plus, Search, Eye, CheckCircle, XCircle, FileText, RefreshCw, Loader2 } from 'lucide-react'
 import { invoicesApi } from '@/lib/api'
-import Topbar from '@/components/layout/Topbar'
+import PageHeroHeader, { HeroButton } from '@/components/dashboard/PageHeroHeader'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
@@ -163,41 +163,45 @@ export default function InvoicesPage() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <Topbar title="Invoices" subtitle={`${invoices.length} records`} />
-
-      <div className="flex-1 overflow-y-auto p-6 space-y-4">
-        {/* Toolbar */}
-        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-          <div className="flex gap-2 flex-1 max-w-md">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-muted" />
-              <input
-                className="input pl-9"
-                placeholder="Search invoices…"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
-            </div>
-            <select
-              className="input w-36"
-              value={statusFilter}
-              onChange={e => setStatusFilter(e.target.value)}
-            >
-              <option value="">All status</option>
-              {['draft', 'submitted', 'approved', 'paid', 'overdue', 'rejected', 'void'].map(s => (
-                <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
-              ))}
-            </select>
-          </div>
-          <div className="flex gap-2">
-            <button onClick={() => refetch()} className="btn-ghost gap-1.5">
-              <RefreshCw className={clsx('w-4 h-4', isLoading && 'animate-spin')} />
-            </button>
-            <button onClick={() => setShowCreate(true)} className="btn-primary gap-2">
-              <Plus className="w-4 h-4" />
+      <PageHeroHeader
+        title="Invoices"
+        highlight="Invoices"
+        subtitle={`${invoices.length} records · Track, approve and manage all billing`}
+        imageIndex={0}
+        actions={
+          <>
+            <HeroButton variant="ghost" onClick={() => refetch()}>
+              <RefreshCw className={clsx('w-3.5 h-3.5', isLoading && 'animate-spin')} />
+            </HeroButton>
+            <HeroButton variant="orange" onClick={() => setShowCreate(true)}>
+              <Plus className="w-3.5 h-3.5" />
               New Invoice
-            </button>
+            </HeroButton>
+          </>
+        }
+      />
+      <div className="flex-1 overflow-y-auto p-6 space-y-4">
+        {/* Search + filter toolbar */}
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-muted" />
+            <input
+              className="input pl-9"
+              placeholder="Search invoices…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
           </div>
+          <select
+            className="input w-36"
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value)}
+          >
+            <option value="">All status</option>
+            {['draft', 'submitted', 'approved', 'paid', 'overdue', 'rejected', 'void'].map(s => (
+              <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+            ))}
+          </select>
         </div>
 
         {/* Stats bar */}

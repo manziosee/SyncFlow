@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { hrApi } from '@/lib/api'
-import Topbar from '@/components/layout/Topbar'
+import PageHeroHeader, { HeroButton } from '@/components/dashboard/PageHeroHeader'
 import {
   Users, DollarSign, Plus, Search, Loader2,
   RefreshCw, Play, CheckCircle, X, FileText,
@@ -202,8 +202,29 @@ export default function HRPage() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <Topbar title="HR & Payroll" subtitle="Employee management and payroll" />
-
+      <PageHeroHeader
+        title="HR & Payroll"
+        highlight="Payroll"
+        subtitle="Employee management, payroll runs & pay slips"
+        imageIndex={2}
+        stats={[
+          { label: 'employees', value: employees.length },
+          { label: 'departments', value: departments.length },
+        ]}
+        actions={
+          tab === 'employees' ? (
+            <HeroButton variant="orange" onClick={() => setShowAddEmp(true)}>
+              <Plus className="w-3.5 h-3.5" />
+              Add Employee
+            </HeroButton>
+          ) : (
+            <HeroButton variant="orange" onClick={() => setShowCreatePayroll(true)}>
+              <Plus className="w-3.5 h-3.5" />
+              New Payroll Run
+            </HeroButton>
+          )
+        }
+      />
       <div className="flex-1 overflow-y-auto p-6 space-y-4">
         {/* KPI strip */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">

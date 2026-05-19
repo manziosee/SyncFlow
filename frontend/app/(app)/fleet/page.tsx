@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fleetApi } from '@/lib/api'
 import { useAuth } from '@/lib/auth-context'
 import { joinChannel, leaveChannel } from '@/lib/socket'
-import Topbar from '@/components/layout/Topbar'
+import PageHeroHeader, { HeroButton } from '@/components/dashboard/PageHeroHeader'
 import {
   Truck, Fuel, MapPin, Plus, Search, Loader2,
   RefreshCw, X, Activity, Navigation, Clock
@@ -242,8 +242,23 @@ export default function FleetPage() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <Topbar title="Fleet Management" subtitle="Vehicles, GPS tracking & fuel" />
-
+      <PageHeroHeader
+        title="Fleet Management"
+        highlight="Fleet"
+        subtitle="Vehicles, live GPS tracking & fuel records"
+        imageIndex={4}
+        stats={[
+          { label: 'vehicles', value: vehicles.length },
+          { label: 'active', value: activeCount, positive: true },
+          { label: 'live GPS', value: liveCount },
+        ]}
+        actions={
+          <HeroButton variant="orange" onClick={() => setShowAdd(true)}>
+            <Plus className="w-3.5 h-3.5" />
+            Add Vehicle
+          </HeroButton>
+        }
+      />
       <div className="flex-1 overflow-y-auto p-6 space-y-4">
         {/* KPI strip */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">

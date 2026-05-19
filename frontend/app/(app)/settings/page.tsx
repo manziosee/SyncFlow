@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useAuth } from '@/lib/auth-context'
-import Topbar from '@/components/layout/Topbar'
+import PageHeroHeader from '@/components/dashboard/PageHeroHeader'
 import {
   User, Bell, Shield, Palette, Globe, LogOut,
   Save, Loader2, Check, Key, Plug, Copy, Eye, EyeOff,
@@ -117,7 +117,12 @@ export default function SettingsPage() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <Topbar title="Settings" subtitle="Manage your account and preferences" />
+      <PageHeroHeader
+        title="Settings"
+        highlight="Settings"
+        subtitle="Account preferences, security & integrations"
+        imageIndex={3}
+      />
 
       <div className="flex-1 overflow-hidden flex">
         {/* Sidebar nav */}
