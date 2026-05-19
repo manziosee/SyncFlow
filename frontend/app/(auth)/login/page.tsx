@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Eye, EyeOff, Loader2, ArrowRight, Sparkles } from 'lucide-react'
+import { Eye, EyeOff, Loader2, ArrowRight, Sparkles, Mail, Lock } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import toast from 'react-hot-toast'
 
@@ -40,7 +40,9 @@ export default function LoginPage() {
     <div className="w-full">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-white mb-1.5">Welcome back</h1>
+        <h1 className="text-2xl font-extrabold text-white mb-1.5 tracking-tight">
+          Welcome back
+        </h1>
         <p className="text-slate-400 text-sm">Sign in to your SyncFlow workspace</p>
       </div>
 
@@ -51,56 +53,72 @@ export default function LoginPage() {
           setForm({ email: 'admin@syncflow.io', password: 'password123' })
           toast.success('Demo credentials filled — click Sign in')
         }}
-        className="w-full mb-6 flex items-center gap-3 bg-primary-500/8 hover:bg-primary-500/14 border border-primary-500/25 hover:border-primary-500/45 rounded-2xl px-4 py-3.5 text-left transition-all group"
+        className="w-full mb-6 flex items-center gap-3 bg-orange-500/8 hover:bg-orange-500/14 border border-orange-500/25 hover:border-orange-500/50 rounded-2xl px-4 py-3.5 text-left transition-all group"
       >
-        <div className="w-8 h-8 rounded-xl bg-primary-500/20 flex items-center justify-center shrink-0">
-          <Sparkles className="w-4 h-4 text-primary-400" />
+        <div className="w-8 h-8 rounded-xl bg-orange-500/20 flex items-center justify-center shrink-0">
+          <Sparkles className="w-4 h-4 text-orange-400" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-primary-300 text-xs font-semibold group-hover:text-primary-200 transition-colors">
+          <p className="text-orange-300 text-xs font-semibold group-hover:text-orange-200 transition-colors">
             Try the live demo — click to fill credentials
           </p>
           <p className="text-slate-500 text-[11px] mt-0.5">admin@syncflow.io · password123</p>
         </div>
-        <ArrowRight className="w-3.5 h-3.5 text-primary-500/60 group-hover:text-primary-400 group-hover:translate-x-0.5 transition-all shrink-0" />
+        <ArrowRight className="w-3.5 h-3.5 text-orange-500/50 group-hover:text-orange-400 group-hover:translate-x-0.5 transition-all shrink-0" />
       </button>
 
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Email */}
         <div>
-          <label className="block text-xs font-semibold text-slate-300 mb-2">
+          <label htmlFor="email" className="block text-xs font-semibold text-slate-300 mb-2">
             Email address
           </label>
-          <input
-            type="email"
-            autoComplete="email"
-            value={form.email}
-            onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-            placeholder="you@company.com"
-            className="w-full bg-slate-800/70 border border-slate-700/80 hover:border-slate-600 rounded-xl px-4 py-3 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all"
-          />
+          <div className="relative">
+            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none">
+              <Mail className="w-4 h-4" />
+            </div>
+            <input
+              id="email"
+              type="email"
+              autoComplete="email"
+              value={form.email}
+              onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+              placeholder="you@company.com"
+              className="w-full bg-slate-900/80 border border-slate-700/70 hover:border-slate-600 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all"
+            />
+          </div>
         </div>
 
         {/* Password */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="block text-xs font-semibold text-slate-300">Password</label>
-            <button type="button" className="text-[11px] text-primary-400 hover:text-primary-300 transition-colors">
+            <label htmlFor="password" className="block text-xs font-semibold text-slate-300">
+              Password
+            </label>
+            <button
+              type="button"
+              className="text-[11px] text-orange-400 hover:text-orange-300 font-medium transition-colors"
+            >
               Forgot password?
             </button>
           </div>
           <div className="relative">
+            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none">
+              <Lock className="w-4 h-4" />
+            </div>
             <input
+              id="password"
               type={showPw ? 'text' : 'password'}
               autoComplete="current-password"
               value={form.password}
               onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
               placeholder="••••••••"
-              className="w-full bg-slate-800/70 border border-slate-700/80 hover:border-slate-600 rounded-xl px-4 py-3 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all pr-11"
+              className="w-full bg-slate-900/80 border border-slate-700/70 hover:border-slate-600 rounded-xl pl-10 pr-11 py-3 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all"
             />
             <button
               type="button"
               onClick={() => setShowPw(v => !v)}
+              aria-label={showPw ? 'Hide password' : 'Show password'}
               className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
             >
               {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -111,7 +129,7 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full flex items-center justify-center gap-2.5 bg-primary-500 hover:bg-primary-400 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold rounded-xl py-3 text-sm transition-all shadow-lg shadow-primary-500/25 hover:shadow-primary-500/40 mt-2"
+          className="w-full flex items-center justify-center gap-2.5 bg-orange-500 hover:bg-orange-400 active:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl py-3.5 text-sm transition-all shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 mt-2"
         >
           {loading ? (
             <><Loader2 className="w-4 h-4 animate-spin" />Signing in…</>
@@ -121,15 +139,15 @@ export default function LoginPage() {
         </button>
       </form>
 
-      <div className="mt-6 flex items-center gap-3">
+      <div className="mt-7 flex items-center gap-3">
         <div className="flex-1 h-px bg-slate-800" />
-        <span className="text-slate-600 text-xs">or</span>
+        <span className="text-slate-600 text-xs font-medium">or</span>
         <div className="flex-1 h-px bg-slate-800" />
       </div>
 
       <p className="text-center text-slate-500 text-sm mt-6">
         Don&apos;t have an account?{' '}
-        <Link href="/register" className="text-primary-400 hover:text-primary-300 font-semibold transition-colors">
+        <Link href="/register" className="text-orange-400 hover:text-orange-300 font-semibold transition-colors">
           Create workspace
         </Link>
       </p>
