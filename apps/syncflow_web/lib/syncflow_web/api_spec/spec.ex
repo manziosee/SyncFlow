@@ -2,7 +2,7 @@ defmodule SyncFlow.Web.ApiSpec do
   @moduledoc "OpenAPI 3.0 specification for the SyncFlow API."
 
   alias OpenApiSpex.{Components, Info, License, OpenApi, Paths, SecurityScheme, Server, Tag}
-  alias SyncFlow.Web.{Router, Endpoint}
+  alias SyncFlow.Web.Router
 
   @behaviour OpenApiSpex.OpenApi
 

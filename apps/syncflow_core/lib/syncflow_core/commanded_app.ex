@@ -6,5 +6,5 @@ defmodule SyncFlow.Core.CommandedApp do
       event_store: SyncFlow.Core.EventStore
     ]
 
-  router(SyncFlow.Core.Router)
+  # Router registered at startup by SyncFlow.Web.Application after all apps compile.
 end

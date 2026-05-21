@@ -4,16 +4,16 @@ defmodule SyncFlow.Web.ApiSpec.Operations do
   Controllers call these to attach swagger metadata.
   """
 
-  alias OpenApiSpex.{Operation, Parameter, RequestBody, Response, Schema}
+  alias OpenApiSpex.{Parameter, Reference, RequestBody, Response, Schema}
 
   def bearer_security, do: [%{"bearerAuth" => []}]
 
-  def json_response(status, description, schema_ref) do
+  def json_response(_status, description, schema_ref) do
     %Response{
       description: description,
       content: %{
         "application/json" => %OpenApiSpex.MediaType{
-          schema: %Schema{"$ref": "#/components/schemas/#{schema_ref}"}
+          schema: %Reference{"$ref": "#/components/schemas/#{schema_ref}"}
         }
       }
     }
@@ -25,7 +25,7 @@ defmodule SyncFlow.Web.ApiSpec.Operations do
       required: required,
       content: %{
         "application/json" => %OpenApiSpex.MediaType{
-          schema: %Schema{"$ref": "#/components/schemas/#{schema_ref}"}
+          schema: %Reference{"$ref": "#/components/schemas/#{schema_ref}"}
         }
       }
     }

@@ -3,7 +3,7 @@ defmodule SyncFlow.Web.Controllers.CustomerController do
   use OpenApiSpex.ControllerSpecs
 
   alias OpenApiSpex.{Parameter, Schema}
-  alias SyncFlow.Core.CommandedApp
+  alias SyncFlow.Web.Dispatch, as: CommandedApp
   alias SyncFlow.CRM.{Commands, Queries}
 
   tags ["Customers"]

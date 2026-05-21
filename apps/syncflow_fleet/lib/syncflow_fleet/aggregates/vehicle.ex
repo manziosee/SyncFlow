@@ -7,7 +7,6 @@ defmodule SyncFlow.Fleet.Aggregates.Vehicle do
     odometer: 0
   ]
 
-  @statuses [:available, :on_trip, :maintenance, :inactive]
 
   def execute(%__MODULE__{vehicle_id: nil}, %Commands.RegisterVehicle{} = cmd) do
     %Events.VehicleRegistered{

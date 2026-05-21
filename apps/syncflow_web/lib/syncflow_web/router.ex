@@ -103,6 +103,10 @@ defmodule SyncFlow.Web.Router do
     # --- AI ---
     post "/ai/command", Controllers.AIController, :command
 
+    # --- File Uploads (Appwrite-backed) ---
+    post "/uploads", Controllers.UploadController, :create
+    delete "/uploads/:file_id", Controllers.UploadController, :delete
+
     # --- Admin only ---
     scope "/admin" do
       pipe_through :admin

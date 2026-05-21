@@ -25,7 +25,6 @@ defmodule SyncFlow.Core.Accounts.User do
     field :locale, :string, default: "en"
 
     belongs_to :organization, SyncFlow.Core.Accounts.Organization, define_field: false
-    foreign_key :org_id, :org_id
 
     timestamps(type: :utc_datetime)
   end

@@ -12,7 +12,6 @@ defmodule SyncFlow.Accounting.Projectors.InvoiceProjector do
 
   alias SyncFlow.Accounting.Events
   alias SyncFlow.Accounting.Schema.Invoice
-  alias SyncFlow.Accounting.Repo
 
   project(%Events.InvoiceCreated{} = evt, _metadata, fn multi ->
     invoice = %Invoice{

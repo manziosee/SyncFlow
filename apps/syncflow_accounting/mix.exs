@@ -35,6 +35,7 @@ defmodule SyncFlow.Accounting.MixProject do
       {:decimal, "~> 2.1"},
       {:ex_money, "~> 5.18"},
       {:commanded, "~> 1.4"},
+      {:commanded_ecto_projections, "~> 1.4"},
       {:ex_machina, "~> 2.7", only: :test}
     ]
   end

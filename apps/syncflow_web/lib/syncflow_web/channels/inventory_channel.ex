@@ -1,6 +1,6 @@
 defmodule SyncFlow.Web.Channels.InventoryChannel do
   use Phoenix.Channel
-  alias SyncFlow.Core.CommandedApp
+  alias SyncFlow.Web.Dispatch, as: CommandedApp
   alias SyncFlow.Inventory.Commands
 
   def join("inventory:warehouse:" <> warehouse_id, _params, socket) do

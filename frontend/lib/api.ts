@@ -229,3 +229,15 @@ export const reportsApi = {
       ? fake({ job_id: 'job-' + Date.now(), status: 'queued', message: 'Report queued' }, 300)
       : api.post('/api/reports/generate', { type, ...extra }),
 }
+
+// ─── File Uploads (Appwrite-backed) ───────────────────────────
+export const uploadsApi = {
+  upload: (file: File) => {
+    if (isDemo()) return fake({ data: { file_id: 'demo-' + Date.now(), url: URL.createObjectURL(file), name: file.name, size: file.size } })
+    const form = new FormData()
+    form.append('file', file)
+    return api.post('/api/uploads', form, { headers: { 'Content-Type': 'multipart/form-data' } })
+  },
+  delete: (fileId: string) =>
+    isDemo() ? fakeOk() : api.delete(`/api/uploads/${fileId}`),
+}

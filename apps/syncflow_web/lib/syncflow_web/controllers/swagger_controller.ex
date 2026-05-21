@@ -1,8 +1,6 @@
 defmodule SyncFlow.Web.Controllers.SwaggerController do
   use Phoenix.Controller
 
-  alias OpenApiSpex.Plug.{RenderSpec, SwaggerUI}
-
   def spec(conn, _params) do
     conn
     |> put_resp_content_type("application/json")

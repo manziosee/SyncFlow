@@ -38,7 +38,7 @@ defmodule SyncFlow.CRM.Schema.Interaction do
   schema "interactions" do
     field :customer_id, :binary_id
     field :type, Ecto.Enum, values: [:call, :email, :meeting, :visit, :note]
-    field :notes, :text
+    field :notes, :string
     field :outcome, :string
     field :recorded_by, :binary_id
     field :occurred_at, :utc_datetime

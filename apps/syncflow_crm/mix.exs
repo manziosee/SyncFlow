@@ -29,7 +29,8 @@ defmodule SyncFlow.CRM.MixProject do
       {:ecto_sql, "~> 3.11"},
       {:postgrex, ">= 0.0.0"},
       {:jason, "~> 1.4"},
-      {:commanded, "~> 1.4"}
+      {:commanded, "~> 1.4"},
+      {:commanded_ecto_projections, "~> 1.4"}
     ]
   end
 end

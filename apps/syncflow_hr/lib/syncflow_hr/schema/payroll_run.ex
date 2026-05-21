@@ -16,7 +16,7 @@ defmodule SyncFlow.HR.Schema.PayrollRun do
     field :processed_by, :binary_id
     field :approved_by, :binary_id
     field :paid_at, :utc_datetime
-    field :notes, :text
+    field :notes, :string
 
     has_many :pay_slips, SyncFlow.HR.Schema.PaySlip, foreign_key: :payroll_run_id
 

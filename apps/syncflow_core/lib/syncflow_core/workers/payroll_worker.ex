@@ -7,6 +7,8 @@ defmodule SyncFlow.Core.Workers.PayrollWorker do
 
   use Oban.Worker, queue: :payroll, max_attempts: 3
 
+  @compile {:no_warn_undefined, SyncFlow.HR.Queries}
+
   alias SyncFlow.HR.Queries
   alias Phoenix.PubSub
 
