@@ -7,7 +7,7 @@ defmodule SyncFlow.Web.Channels.InvoiceChannel do
 
   use Phoenix.Channel
   alias SyncFlow.Web.Presence
-  alias SyncFlow.Core.CommandedApp
+  alias SyncFlow.Web.Dispatch, as: CommandedApp
   alias SyncFlow.Accounting.Commands
   alias SyncFlow.Accounting.Queries
 
@@ -17,32 +17,6 @@ defmodule SyncFlow.Web.Channels.InvoiceChannel do
     send(self(), :after_join)
 
     {:ok, %{invoice_id: invoice_id}, socket}
-  end
-
-  def handle_info(:after_join, socket) do
-    invoice_id = socket.assigns.invoice_id
-    user_id = socket.assigns.user_id
-
-    # Track user presence on this invoice (collaborative cursor)
-    {:ok, _} =
-      Presence.track(socket, user_id, %{
-        name: socket.assigns.user_name,
-        role: socket.assigns.role,
-        cursor: nil,
-        joined_at: DateTime.utc_now() |> DateTime.to_iso8601()
-      })
-
-    # Push current presence list to joining user
-    push(socket, "presence_state", Presence.list(socket))
-
-    # Subscribe to PubSub for this invoice
-    Phoenix.PubSub.subscribe(SyncFlow.PubSub, "invoice:#{invoice_id}")
-
-    # Send current invoice snapshot
-    case Queries.get_invoice(invoice_id) do
-      nil -> {:noreply, socket}
-      invoice -> push(socket, "invoice_snapshot", format_invoice(invoice)); {:noreply, socket}
-    end
   end
 
   # User updates a single field
@@ -125,7 +99,28 @@ defmodule SyncFlow.Web.Channels.InvoiceChannel do
     end
   end
 
-  # Receive PubSub broadcast and forward to channel clients
+  def handle_info(:after_join, socket) do
+    invoice_id = socket.assigns.invoice_id
+    user_id = socket.assigns.user_id
+
+    {:ok, _} =
+      Presence.track(socket, user_id, %{
+        name: socket.assigns.user_name,
+        role: socket.assigns.role,
+        cursor: nil,
+        joined_at: DateTime.utc_now() |> DateTime.to_iso8601()
+      })
+
+    push(socket, "presence_state", Presence.list(socket))
+
+    Phoenix.PubSub.subscribe(SyncFlow.PubSub, "invoice:#{invoice_id}")
+
+    case Queries.get_invoice(invoice_id) do
+      nil -> {:noreply, socket}
+      invoice -> push(socket, "invoice_snapshot", format_invoice(invoice)); {:noreply, socket}
+    end
+  end
+
   def handle_info({:field_updated, event}, socket) do
     push(socket, "field_updated", %{
       field: event.field,

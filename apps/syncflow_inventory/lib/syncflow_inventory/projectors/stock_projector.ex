@@ -7,7 +7,7 @@ defmodule SyncFlow.Inventory.Projectors.StockProjector do
 
   import Ecto.Query
   alias SyncFlow.Inventory.Events
-  alias SyncFlow.Inventory.Schema.{StockItem, StockMovement, Warehouse}
+  alias SyncFlow.Inventory.Schema.{StockItem, StockMovement}
 
   project(%Events.StockItemCreated{} = evt, _meta, fn multi ->
     item = %StockItem{

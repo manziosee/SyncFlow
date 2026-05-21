@@ -39,7 +39,7 @@ defmodule SyncFlow.Fleet.Schema.Trip do
     field :started_at, :utc_datetime
     field :ended_at, :utc_datetime
     field :distance_km, :float
-    field :notes, :text
+    field :notes, :string
 
     timestamps(type: :utc_datetime)
   end

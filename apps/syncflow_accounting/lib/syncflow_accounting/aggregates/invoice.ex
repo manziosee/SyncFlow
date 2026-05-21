@@ -19,8 +19,6 @@ defmodule SyncFlow.Accounting.Aggregates.Invoice do
     :editors
   ]
 
-  @statuses ~w(draft pending_approval approved rejected voided paid)a
-
   # --- Command handlers ---
 
   def execute(%__MODULE__{invoice_id: nil}, %Commands.CreateInvoice{} = cmd) do

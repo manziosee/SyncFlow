@@ -1,62 +1,45 @@
 import Config
 
-db_host = System.get_env("PGHOST", "localhost")
-db_user = System.get_env("PGUSER", "postgres")
-db_pass = System.get_env("PGPASSWORD", "postgres")
+db_url = System.get_env("DATABASE_URL")
 
-config :syncflow_core, SyncFlow.Core.Repo,
-  username: db_user,
-  password: db_pass,
-  hostname: db_host,
-  database: "syncflow_dev",
-  stacktrace: true,
-  show_sensitive_data_on_connection_error: true,
-  pool_size: 10
+if db_url do
+  shared = [
+    url: db_url,
+    ssl: [verify: :verify_none],
+    stacktrace: true,
+    show_sensitive_data_on_connection_error: true,
+    pool_size: 10
+  ]
 
-config :syncflow_accounting, SyncFlow.Accounting.Repo,
-  username: db_user,
-  password: db_pass,
-  hostname: db_host,
-  database: "syncflow_accounting_dev",
-  stacktrace: true,
-  show_sensitive_data_on_connection_error: true,
-  pool_size: 10
+  config :syncflow_core,     SyncFlow.Core.Repo,       shared
+  config :syncflow_accounting, SyncFlow.Accounting.Repo, shared
+  config :syncflow_inventory,  SyncFlow.Inventory.Repo,  shared
+  config :syncflow_hr,         SyncFlow.HR.Repo,         shared
+  config :syncflow_crm,        SyncFlow.CRM.Repo,        shared
+  config :syncflow_fleet,      SyncFlow.Fleet.Repo,      shared
+else
+  db_host = System.get_env("PGHOST", "localhost")
+  db_user = System.get_env("PGUSER", "postgres")
+  db_pass = System.get_env("PGPASSWORD", "postgres")
 
-config :syncflow_inventory, SyncFlow.Inventory.Repo,
-  username: db_user,
-  password: db_pass,
-  hostname: db_host,
-  database: "syncflow_inventory_dev",
-  stacktrace: true,
-  show_sensitive_data_on_connection_error: true,
-  pool_size: 10
-
-config :syncflow_hr, SyncFlow.HR.Repo,
-  username: db_user,
-  password: db_pass,
-  hostname: db_host,
-  database: "syncflow_hr_dev",
-  stacktrace: true,
-  show_sensitive_data_on_connection_error: true,
-  pool_size: 10
-
-config :syncflow_crm, SyncFlow.CRM.Repo,
-  username: db_user,
-  password: db_pass,
-  hostname: db_host,
-  database: "syncflow_crm_dev",
-  stacktrace: true,
-  show_sensitive_data_on_connection_error: true,
-  pool_size: 10
-
-config :syncflow_fleet, SyncFlow.Fleet.Repo,
-  username: db_user,
-  password: db_pass,
-  hostname: db_host,
-  database: "syncflow_fleet_dev",
-  stacktrace: true,
-  show_sensitive_data_on_connection_error: true,
-  pool_size: 10
+  for {app, repo, db} <- [
+    {:syncflow_core,       SyncFlow.Core.Repo,        "syncflow_dev"},
+    {:syncflow_accounting, SyncFlow.Accounting.Repo,  "syncflow_accounting_dev"},
+    {:syncflow_inventory,  SyncFlow.Inventory.Repo,   "syncflow_inventory_dev"},
+    {:syncflow_hr,         SyncFlow.HR.Repo,           "syncflow_hr_dev"},
+    {:syncflow_crm,        SyncFlow.CRM.Repo,          "syncflow_crm_dev"},
+    {:syncflow_fleet,      SyncFlow.Fleet.Repo,        "syncflow_fleet_dev"}
+  ] do
+    config app, repo,
+      username: db_user,
+      password: db_pass,
+      hostname: db_host,
+      database: db,
+      stacktrace: true,
+      show_sensitive_data_on_connection_error: true,
+      pool_size: 10
+  end
+end
 
 config :syncflow_web, SyncFlow.Web.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4000],

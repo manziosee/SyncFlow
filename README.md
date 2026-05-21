@@ -12,9 +12,8 @@
 ![Phoenix](https://img.shields.io/badge/Phoenix-1.7-FD4F00?style=for-the-badge&logo=phoenixframework&logoColor=white)
 ![Next.js](https://img.shields.io/badge/Next.js-15-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-316192?style=for-the-badge&logo=postgresql&logoColor=white)
-![Redis](https://img.shields.io/badge/Redis-7-DC382D?style=for-the-badge&logo=redis&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/Neon_PostgreSQL-16-316192?style=for-the-badge&logo=postgresql&logoColor=white)
+![Appwrite](https://img.shields.io/badge/Appwrite-Storage-FD366E?style=for-the-badge&logo=appwrite&logoColor=white)
 ![Claude AI](https://img.shields.io/badge/Claude_AI-Anthropic-000000?style=for-the-badge&logo=anthropic&logoColor=white)
 
 </div>
@@ -43,14 +42,13 @@
 | **Language** | ![Elixir](https://img.shields.io/badge/Elixir-4B275F?logo=elixir&logoColor=white) Elixir 1.16 + Erlang/OTP 26 | Fault-tolerant concurrency, millions of connections |
 | **Web** | ![Phoenix](https://img.shields.io/badge/Phoenix-FD4F00?logo=phoenixframework&logoColor=white) Phoenix 1.7 | HTTP + WebSocket channels + Presence |
 | **Architecture** | Commanded 1.4 + EventStore 1.4 | CQRS + Event Sourcing — immutable audit trail |
-| **Database** | ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?logo=postgresql&logoColor=white) PostgreSQL 16 | Event store + read model projections (one DB per app) |
-| **Cache** | ![Redis](https://img.shields.io/badge/Redis-DC382D?logo=redis&logoColor=white) Redis 7 | PubSub backend (optional) |
+| **Database** | [Neon PostgreSQL](https://neon.tech) (cloud-hosted) | Event store + read model projections — no local DB needed |
+| **File Storage** | [Appwrite](https://appwrite.io) | Document/file uploads replacing AWS S3 |
 | **In-Memory** | Erlang ETS (GenServer) | Live GPS cache — 1 000 vehicles × ~200 bytes |
 | **Background Jobs** | Oban 2.17 | Async payroll, notifications, report generation |
 | **Auth** | Guardian 2.3 (JWT) | Stateless, role + org embedded in token |
-| **API Docs** | OpenAPI 3.0 (open_api_spex 3.21) | Interactive Swagger UI |
-| **AI** | ![Claude](https://img.shields.io/badge/Claude-Anthropic-000000?logo=anthropic&logoColor=white) Claude Sonnet (Anthropic) | Natural language ERP commands |
-| **Infra** | ![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white) Docker Compose | PostgreSQL + Redis + PgAdmin |
+| **API Docs** | OpenAPI 3.0 (open_api_spex 3.22) | Interactive Swagger UI |
+| **AI** | Groq (primary) → OpenAI → Claude Sonnet → rule-based | Natural language ERP commands with multi-provider fallback |
 
 ### Frontend
 
@@ -160,7 +158,9 @@ syncflow/                            # Umbrella root
 │   │   ├── auth/                    # Guardian JWT, pipeline
 │   │   ├── accounts/                # User, Organization schemas
 │   │   ├── event_store/             # EventStore + Commanded app
-│   │   ├── router.ex                # Commanded command router
+│   │   ├── cldr.ex                  # ex_cldr backend (en/fr, RWF money formatting)
+│   │   ├── storage/appwrite.ex      # Appwrite file upload client
+│   │   ├── router.ex                # Commanded command router stub
 │   │   └── workers/
 │   │       ├── payroll_worker.ex    # ★ Oban — async PAYE payroll
 │   │       ├── notification_worker.ex # ★ Oban — in-app + email
@@ -197,6 +197,8 @@ syncflow/                            # Umbrella root
 │   │   └── queries.ex               # Trip history, fuel costs, fleet summary
 │   │
 │   └── syncflow_web/                # Phoenix Web Layer
+│       ├── commanded_router.ex      # Full Commanded router (compiled last — avoids cross-app ordering)
+│       ├── dispatch.ex              # Thin shim: CommandedApp.dispatch/2 interface
 │       ├── channels/
 │       │   ├── invoice_channel.ex   # Multiplayer invoice editing + presence
 │       │   ├── dashboard_channel.ex # Live CEO / Warehouse KPIs
@@ -206,7 +208,8 @@ syncflow/                            # Umbrella root
 │       ├── controllers/             # 14 REST controllers
 │       │   ├── dashboard_controller.ex  # ★ CEO + Warehouse + Regional
 │       │   ├── report_controller.ex     # ★ Async report generation
-│       │   ├── ai_controller.ex         # ★ 9 NL intents via Claude
+│       │   ├── upload_controller.ex     # ★ File uploads via Appwrite (max 20 MB)
+│       │   ├── ai_controller.ex         # ★ 9 NL intents, Groq→OpenAI→Claude fallback
 │       │   └── ...
 │       ├── api_spec/                # OpenAPI 3.0 schemas + spec
 │       └── router.ex
@@ -245,14 +248,13 @@ syncflow/                            # Umbrella root
 │   └── package.json
 │
 ├── config/
-│   ├── config.exs                   # Shared config (Oban, Commanded, Guardian)
-│   ├── dev.exs                      # Local PostgreSQL
+│   ├── config.exs                   # Shared config (Oban, Commanded, Guardian, CLDR)
+│   ├── dev.exs                      # Dev config — DATABASE_URL → Neon, fallback to local
 │   ├── test.exs
 │   └── runtime.exs                  # Production env vars
 │
-├── docker-compose.yml               # PostgreSQL 16 + Redis 7 + PgAdmin 4
+├── docker-compose.yml               # Redis 7 (optional) + PgAdmin
 ├── Makefile                         # Developer commands
-├── install.sh                       # One-command setup
 └── .env.example
 ```
 
@@ -263,42 +265,96 @@ syncflow/                            # Umbrella root
 ### Prerequisites
 
 - Git
-- Docker & Docker Compose
-- Elixir 1.16 + Erlang 26 (auto-installed by `install.sh` via asdf)
+- [asdf](https://asdf-vm.com) (manages Elixir + Erlang versions)
+- A free [Neon PostgreSQL](https://neon.tech) account (two databases: main + event store)
+- A free [Appwrite](https://appwrite.io) project (for file uploads)
 
-### 1. Clone & Install
+### 1. Install Elixir & Erlang via asdf (Ubuntu 24.04)
+
+```bash
+# Install asdf
+git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.14.0
+echo '. "$HOME/.asdf/asdf.sh"' >> ~/.bashrc && source ~/.bashrc
+
+# Add plugins
+asdf plugin add erlang
+asdf plugin add elixir
+
+# Build Erlang (Ubuntu 24.04 — disable wx and odbc which are unavailable)
+export KERL_CONFIGURE_OPTIONS="--disable-debug --without-javac --without-wx --without-odbc"
+asdf install erlang 26.2.5
+asdf install elixir 1.16.3-otp-26
+
+asdf global erlang 26.2.5
+asdf global elixir 1.16.3-otp-26
+```
+
+### 2. Clone & Install Dependencies
 
 ```bash
 git clone https://github.com/your-org/syncflow.git
 cd syncflow
-
-# Full one-command setup
-./install.sh
-
-# Or step by step:
-make install    # Install Elixir + Erlang via asdf
-make infra      # Start Docker (PostgreSQL 16, Redis 7)
-make deps       # Fetch Mix dependencies
-make migrate    # Create databases & run migrations
+mix deps.get
 ```
 
-### 2. Configure Environment
+### 3. Configure Environment
 
 ```bash
 cp .env.example .env
-# Required:
-GUARDIAN_SECRET=<generate with: mix phx.gen.secret 32>
-SECRET_KEY_BASE=<generate with: mix phx.gen.secret>
-
-# Optional:
-ANTHROPIC_API_KEY=<your Claude API key — enables AI commands>
-MAILGUN_API_KEY=<Mailgun key — enables email notifications>
 ```
 
-### 3. Start the Server
+Edit `.env` and fill in:
 
 ```bash
-make server
+# Neon PostgreSQL — create two databases (main + event store) at https://neon.tech
+DATABASE_URL=postgresql://<user>:<password>@<host>.neon.tech/<dbname>?sslmode=require&channel_binding=require
+EVENT_STORE_URL=postgresql://<user>:<password>@<host>.neon.tech/<eventdb>?sslmode=require&channel_binding=require
+
+# Phoenix secrets — generate with:
+#   mix phx.gen.secret        → SECRET_KEY_BASE
+#   mix phx.gen.secret 32     → GUARDIAN_SECRET
+#   openssl rand -base64 32   → LIVE_VIEW_SALT
+SECRET_KEY_BASE=
+GUARDIAN_SECRET=
+LIVE_VIEW_SALT=
+
+# Appwrite — https://appwrite.io (free tier)
+APPWRITE_API_KEY=
+APPWRITE_PROJECT_ID=
+APPWRITE_BUCKET_ID=syncflow-uploads
+
+# Optional — enables AI natural language commands
+GROQ_API_KEY=
+OPENAI_API_KEY=
+ANTHROPIC_API_KEY=
+
+# Optional — enables email notifications
+MAILGUN_API_KEY=
+MAILGUN_DOMAIN=
+```
+
+### 4. Create Databases & Run Migrations
+
+```bash
+export PATH="$HOME/.asdf/bin:$HOME/.asdf/shims:$PATH"
+export ELIXIR_ERL_OPTIONS="+fnu"
+export DATABASE_URL="<your neon url>"
+export EVENT_STORE_URL="<your neon event store url>"
+
+mix ecto.create
+mix ecto.migrate
+```
+
+### 5. Start the Server
+
+```bash
+export PATH="$HOME/.asdf/bin:$HOME/.asdf/shims:$PATH"
+export ELIXIR_ERL_OPTIONS="+fnu"
+export DATABASE_URL="<your neon url>"
+export EVENT_STORE_URL="<your neon event store url>"
+export SECRET_KEY_BASE="<your secret>"
+
+iex -S mix phx.server
 # → http://localhost:4000
 # → Swagger UI: http://localhost:4000/api/docs
 ```
@@ -459,6 +515,9 @@ curl -X POST http://localhost:4000/api/reports/generate \
 | Method | Path | Description |
 |--------|------|-------------|
 | `POST` | `/api/ai/command` | Free-text ERP command |
+| `POST` | `/api/uploads` | Upload a file (multipart, max 20 MB) |
+
+**AI provider fallback chain:** Groq → OpenAI → Anthropic Claude → built-in rule-based parser
 
 **Supported intents:**
 
@@ -590,24 +649,21 @@ This gives you:
 ## Development Commands
 
 ```bash
-make server          # Start server (iex + Phoenix) → http://localhost:4000
-make test            # Run test suite
-make test.cover      # Run with coverage report
-make format          # Format all .ex files
-make lint            # Format check + Credo static analysis
-make reset           # Drop + recreate all databases
+# Start the server (set env vars first — see Quick Start)
+iex -S mix phx.server
+# → http://localhost:4000
+# → Swagger UI: http://localhost:4000/api/docs
 
-# Database
-make migrate         # Run pending migrations across all apps
-mix ecto.rollback    # Rollback last migration (per app)
+# Database (env vars must be set)
+mix ecto.create         # Create all databases on Neon
+mix ecto.migrate        # Run all pending migrations
+mix ecto.rollback       # Rollback last migration
 
-# Docker infra
-docker compose up -d     # Start PostgreSQL 16 + Redis 7 + PgAdmin
-docker compose down      # Stop
-docker compose logs -f   # Follow logs
-
-# PgAdmin — web DB explorer
-open http://localhost:5050   # admin@syncflow.local / admin
+# Code quality
+mix format              # Format all .ex / .exs files
+mix credo               # Static analysis
+mix test                # Run test suite
+mix test --cover        # Run with coverage report
 ```
 
 ---
@@ -616,14 +672,22 @@ open http://localhost:5050   # admin@syncflow.local / admin
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `DATABASE_URL` | Prod only | PostgreSQL connection string |
-| `SECRET_KEY_BASE` | Prod only | 64-byte Phoenix secret (mix phx.gen.secret) |
-| `GUARDIAN_SECRET` | Yes | JWT signing key (mix phx.gen.secret 32) |
-| `ANTHROPIC_API_KEY` | No | Enable Claude AI natural language commands |
+| `DATABASE_URL` | Yes | Neon PostgreSQL connection string (main DB) |
+| `EVENT_STORE_URL` | Yes | Neon PostgreSQL connection string (event store DB) |
+| `SECRET_KEY_BASE` | Yes | 64-byte Phoenix secret (`mix phx.gen.secret`) |
+| `GUARDIAN_SECRET` | Yes | JWT signing key (`mix phx.gen.secret 32`) |
+| `LIVE_VIEW_SALT` | No | LiveView signing salt (`openssl rand -base64 32`) |
+| `APPWRITE_API_KEY` | No | Appwrite server API key — enables file uploads |
+| `APPWRITE_PROJECT_ID` | No | Appwrite project ID |
+| `APPWRITE_BUCKET_ID` | No | Appwrite storage bucket (default: `syncflow-uploads`) |
+| `APPWRITE_ENDPOINT` | No | Appwrite endpoint (default: `https://cloud.appwrite.io/v1`) |
+| `GROQ_API_KEY` | No | Groq API key — primary AI provider for NL commands |
+| `OPENAI_API_KEY` | No | OpenAI API key — secondary AI provider |
+| `ANTHROPIC_API_KEY` | No | Anthropic API key — tertiary AI provider |
 | `MAILGUN_API_KEY` | No | Email delivery for notifications |
-| `MAILGUN_DOMAIN` | No | Mailgun sending domain (default: syncflow.rw) |
-| `POOL_SIZE` | No | DB connection pool size (default 10) |
-| `PORT` | No | HTTP port (default 4000) |
+| `MAILGUN_DOMAIN` | No | Mailgun sending domain |
+| `POOL_SIZE` | No | DB connection pool size (default: 10) |
+| `PORT` | No | HTTP port (default: 4000) |
 | `PHX_HOST` | Prod only | Public hostname for WebSocket URL generation |
 
 ---

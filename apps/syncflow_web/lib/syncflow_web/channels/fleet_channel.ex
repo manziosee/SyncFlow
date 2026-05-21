@@ -6,7 +6,7 @@ defmodule SyncFlow.Web.Channels.FleetChannel do
 
   use Phoenix.Channel
   alias SyncFlow.Fleet.Tracker
-  alias SyncFlow.Core.CommandedApp
+  alias SyncFlow.Web.Dispatch, as: CommandedApp
   alias SyncFlow.Fleet.Commands
 
   def join("fleet:live", _params, socket) do

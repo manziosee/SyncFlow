@@ -8,30 +8,26 @@ if config_env() == :prod do
   event_store_url =
     System.get_env("EVENT_STORE_URL") || db_url
 
+  pool = String.to_integer(System.get_env("POOL_SIZE", "10"))
+  ssl = [verify: :verify_none]
+
   config :syncflow_core, SyncFlow.Core.Repo,
-    url: db_url,
-    pool_size: String.to_integer(System.get_env("POOL_SIZE", "10")),
-    socket_options: []
+    url: db_url, pool_size: pool, ssl: ssl
 
   config :syncflow_accounting, SyncFlow.Accounting.Repo,
-    url: System.get_env("ACCOUNTING_DB_URL", db_url),
-    pool_size: String.to_integer(System.get_env("POOL_SIZE", "10"))
+    url: System.get_env("ACCOUNTING_DB_URL", db_url), pool_size: pool, ssl: ssl
 
   config :syncflow_inventory, SyncFlow.Inventory.Repo,
-    url: System.get_env("INVENTORY_DB_URL", db_url),
-    pool_size: String.to_integer(System.get_env("POOL_SIZE", "10"))
+    url: System.get_env("INVENTORY_DB_URL", db_url), pool_size: pool, ssl: ssl
 
   config :syncflow_hr, SyncFlow.HR.Repo,
-    url: System.get_env("HR_DB_URL", db_url),
-    pool_size: String.to_integer(System.get_env("POOL_SIZE", "10"))
+    url: System.get_env("HR_DB_URL", db_url), pool_size: pool, ssl: ssl
 
   config :syncflow_crm, SyncFlow.CRM.Repo,
-    url: System.get_env("CRM_DB_URL", db_url),
-    pool_size: String.to_integer(System.get_env("POOL_SIZE", "10"))
+    url: System.get_env("CRM_DB_URL", db_url), pool_size: pool, ssl: ssl
 
   config :syncflow_fleet, SyncFlow.Fleet.Repo,
-    url: System.get_env("FLEET_DB_URL", db_url),
-    pool_size: String.to_integer(System.get_env("POOL_SIZE", "10"))
+    url: System.get_env("FLEET_DB_URL", db_url), pool_size: pool, ssl: ssl
 
   secret_key_base =
     System.get_env("SECRET_KEY_BASE") ||
@@ -59,4 +55,17 @@ if config_env() == :prod do
       url: event_store_url,
       pool_size: 10
     ]
+
+  # AI providers
+  config :syncflow_core, :ai,
+    openai_api_key: System.get_env("OPENAI_API_KEY"),
+    groq_api_key: System.get_env("GROQ_API_KEY"),
+    anthropic_api_key: System.get_env("ANTHROPIC_API_KEY")
+
+  # File storage — Appwrite
+  config :syncflow_core, :appwrite,
+    endpoint: System.get_env("APPWRITE_ENDPOINT", "https://cloud.appwrite.io/v1"),
+    api_key: System.get_env("APPWRITE_API_KEY"),
+    project_id: System.get_env("APPWRITE_PROJECT_ID"),
+    bucket_id: System.get_env("APPWRITE_BUCKET_ID", "syncflow-uploads")
 end

@@ -3,14 +3,13 @@ import Config
 # Shared config across all apps
 config :syncflow_core,
   ecto_repos: [SyncFlow.Core.Repo],
-  event_store: [
-    serializer: Commanded.Serialization.JsonSerializer,
-    username: System.get_env("PGUSER", "postgres"),
-    password: System.get_env("PGPASSWORD", "postgres"),
-    database: System.get_env("EVENT_STORE_DB", "syncflow_events"),
-    hostname: System.get_env("PGHOST", "localhost"),
-    pool_size: 10
-  ]
+  event_stores: [SyncFlow.Core.EventStore]
+
+config :syncflow_core, SyncFlow.Core.EventStore,
+  serializer: Commanded.Serialization.JsonSerializer,
+  url: (System.get_env("EVENT_STORE_URL") || System.get_env("DATABASE_URL") || "postgresql://postgres:postgres@localhost/syncflow_events") |> String.split("?") |> hd(),
+  ssl: [verify: :verify_none],
+  pool_size: 10
 
 config :syncflow_accounting, ecto_repos: [SyncFlow.Accounting.Repo]
 config :syncflow_inventory, ecto_repos: [SyncFlow.Inventory.Repo]
@@ -49,6 +48,10 @@ config :syncflow_core, Oban,
     fleet: 10
   ]
 
+# CLDR / ex_money
+config :ex_cldr, default_backend: SyncFlow.Core.Cldr
+config :ex_money, default_cldr_backend: SyncFlow.Core.Cldr
+
 # Swoosh mailer
 config :swoosh, api_client: Swoosh.ApiClient.Finch, finch_name: SyncFlow.Finch
 
@@ -58,5 +61,18 @@ config :commanded,
 
 config :commanded_eventstore_adapter,
   serializer: Commanded.Serialization.JsonSerializer
+
+# AI providers (overridden per environment via runtime.exs in prod)
+config :syncflow_core, :ai,
+  openai_api_key: System.get_env("OPENAI_API_KEY"),
+  groq_api_key: System.get_env("GROQ_API_KEY"),
+  anthropic_api_key: System.get_env("ANTHROPIC_API_KEY")
+
+# File storage — Appwrite (replaces AWS S3)
+config :syncflow_core, :appwrite,
+  endpoint: System.get_env("APPWRITE_ENDPOINT", "https://cloud.appwrite.io/v1"),
+  api_key: System.get_env("APPWRITE_API_KEY"),
+  project_id: System.get_env("APPWRITE_PROJECT_ID"),
+  bucket_id: System.get_env("APPWRITE_BUCKET_ID", "syncflow-uploads")
 
 import_config "#{config_env()}.exs"

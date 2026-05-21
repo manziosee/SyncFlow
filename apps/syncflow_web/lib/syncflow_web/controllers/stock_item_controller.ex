@@ -3,7 +3,7 @@ defmodule SyncFlow.Web.Controllers.StockItemController do
   use OpenApiSpex.ControllerSpecs
 
   alias OpenApiSpex.{Parameter, Schema}
-  alias SyncFlow.Core.CommandedApp
+  alias SyncFlow.Web.Dispatch, as: CommandedApp
   alias SyncFlow.Inventory.{Commands, Queries}
 
   tags ["Stock Items"]

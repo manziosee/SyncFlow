@@ -31,10 +31,10 @@ defmodule SyncFlow.Web.Channels.PresenceChannel do
     {:noreply, socket}
   end
 
+  def handle_info({:DOWN, _, _, _, _}, socket), do: {:noreply, socket}
+  def handle_info(_, socket), do: {:noreply, socket}
+
   def handle_in("ping", _payload, socket) do
     {:reply, {:ok, %{status: "pong"}}, socket}
   end
-
-  def handle_info({:DOWN, _, _, _, _}, socket), do: {:noreply, socket}
-  def handle_info(_, socket), do: {:noreply, socket}
 end

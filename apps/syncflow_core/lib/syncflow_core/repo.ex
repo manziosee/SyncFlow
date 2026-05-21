@@ -3,12 +3,14 @@ defmodule SyncFlow.Core.Repo do
     otp_app: :syncflow_core,
     adapter: Ecto.Adapters.Postgres
 
+  import Ecto.Query
+
   def paginate(query, page, per_page \\ 20) do
-    offset = (page - 1) * per_page
+    offset_val = (page - 1) * per_page
 
     query
     |> limit(^per_page)
-    |> offset(^offset)
+    |> offset(^offset_val)
     |> all()
   end
 end

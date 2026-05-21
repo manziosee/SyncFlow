@@ -13,6 +13,13 @@ defmodule SyncFlow.Core.Workers.ReportWorker do
 
   use Oban.Worker, queue: :reports, max_attempts: 2
 
+  @compile {:no_warn_undefined, [
+    SyncFlow.Accounting.Queries,
+    SyncFlow.Inventory.Queries,
+    SyncFlow.HR.Queries,
+    SyncFlow.Fleet.Queries
+  ]}
+
   alias SyncFlow.Accounting.Queries, as: AQ
   alias SyncFlow.Inventory.Queries, as: IQ
   alias SyncFlow.HR.Queries, as: HQ

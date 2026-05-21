@@ -6,7 +6,6 @@ defmodule SyncFlow.Web.Channels.DashboardChannel do
 
   use Phoenix.Channel
   alias SyncFlow.Accounting.Queries, as: AQ
-  alias SyncFlow.Inventory.Queries, as: IQ
 
   def join("dashboard:" <> dashboard_type, _params, socket) do
     org_id = socket.assigns.org_id
@@ -85,7 +84,7 @@ defmodule SyncFlow.Web.Channels.DashboardChannel do
     }
   end
 
-  defp warehouse_dashboard(org_id) do
+  defp warehouse_dashboard(_org_id) do
     %{
       low_stock_count: 0,
       pending_transfers: 0

@@ -30,7 +30,8 @@ defmodule SyncFlow.Fleet.MixProject do
       {:postgrex, ">= 0.0.0"},
       {:jason, "~> 1.4"},
       {:decimal, "~> 2.1"},
-      {:commanded, "~> 1.4"}
+      {:commanded, "~> 1.4"},
+      {:commanded_ecto_projections, "~> 1.4"}
     ]
   end
 end

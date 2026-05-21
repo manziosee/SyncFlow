@@ -7,10 +7,11 @@ defmodule SyncFlow.Web.Controllers.AIController do
   use Phoenix.Controller, formats: [:json]
   use OpenApiSpex.ControllerSpecs
 
-  alias SyncFlow.Core.CommandedApp
+  alias SyncFlow.Web.Dispatch, as: CommandedApp
   alias SyncFlow.Accounting.{Commands, Queries}
   alias SyncFlow.Inventory.Queries, as: IQ
-  alias SyncFlow.Fleet.{Queries, Tracker}
+  alias SyncFlow.Fleet.Queries, as: FQ
+  alias SyncFlow.Fleet.Tracker
   alias SyncFlow.HR.Queries, as: HQ
 
   tags ["AI"]
@@ -96,7 +97,7 @@ defmodule SyncFlow.Web.Controllers.AIController do
         })
 
       {:ok, %{"intent" => "fleet_status"}} ->
-        counts = SyncFlow.Fleet.Queries.fleet_summary(org_id)
+        counts = FQ.fleet_summary(org_id)
         active = Tracker.all_active_vehicles()
         json(conn, %{
           data: %{by_status: counts, active_on_gps: length(active)},
@@ -176,12 +177,11 @@ defmodule SyncFlow.Web.Controllers.AIController do
   defp build_lines(_), do: []
 
   defp parse_intent(message) do
-    api_key = System.get_env("ANTHROPIC_API_KEY")
-
-    if is_nil(api_key) do
-      {:ok, rule_based_parse(message)}
-    else
-      call_anthropic(message, api_key)
+    cond do
+      key = System.get_env("GROQ_API_KEY") -> call_groq(message, key)
+      key = System.get_env("OPENAI_API_KEY") -> call_openai(message, key)
+      key = System.get_env("ANTHROPIC_API_KEY") -> call_anthropic(message, key)
+      true -> {:ok, rule_based_parse(message)}
     end
   end
 
@@ -236,6 +236,57 @@ defmodule SyncFlow.Web.Controllers.AIController do
       "amount" => (amount_match && String.replace(Enum.at(amount_match, 1), ",", "")) || nil,
       "currency" => "RWF"
     }
+  end
+
+  defp call_groq(message, api_key) do
+    body = Jason.encode!(%{
+      model: "llama-3.3-70b-versatile",
+      messages: [
+        %{role: "system", content: @system_prompt},
+        %{role: "user", content: message}
+      ],
+      max_tokens: 512,
+      temperature: 0
+    })
+
+    call_openai_compat("https://api.groq.com/openai/v1/chat/completions", api_key, body)
+  end
+
+  defp call_openai(message, api_key) do
+    body = Jason.encode!(%{
+      model: "gpt-4o-mini",
+      messages: [
+        %{role: "system", content: @system_prompt},
+        %{role: "user", content: message}
+      ],
+      max_tokens: 512,
+      temperature: 0
+    })
+
+    call_openai_compat("https://api.openai.com/v1/chat/completions", api_key, body)
+  end
+
+  defp call_openai_compat(url, api_key, body) do
+    headers = [
+      {"content-type", "application/json"},
+      {"authorization", "Bearer #{api_key}"}
+    ]
+
+    case Finch.build(:post, url, headers, body) |> Finch.request(SyncFlow.Finch) do
+      {:ok, %{status: 200, body: resp_body}} ->
+        with {:ok, %{"choices" => [%{"message" => %{"content" => text}} | _]}} <- Jason.decode(resp_body),
+             {:ok, parsed} <- Jason.decode(text) do
+          {:ok, parsed}
+        else
+          _ -> {:ok, %{"intent" => "unknown", "parameters" => %{}}}
+        end
+
+      {:ok, %{status: status, body: resp_body}} ->
+        {:error, "AI provider returned #{status}: #{resp_body}"}
+
+      {:error, reason} ->
+        {:error, "AI service unavailable: #{inspect(reason)}"}
+    end
   end
 
   defp call_anthropic(message, api_key) do
