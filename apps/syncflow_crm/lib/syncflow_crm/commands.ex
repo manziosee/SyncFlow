@@ -1,7 +1,7 @@
 defmodule SyncFlow.CRM.Commands do
   defmodule RegisterCustomer do
     @derive Jason.Encoder
-    defstruct [:customer_id, :org_id, :name, :email, :phone, :type, :address, :created_by]
+    defstruct [:customer_id, :org_id, :name, :email, :phone, :type, :status, :address, :country, :industry, :created_by]
   end
 
   defmodule UpdateCustomer do

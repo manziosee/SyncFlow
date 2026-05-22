@@ -11,8 +11,10 @@ defmodule SyncFlow.CRM.Schema.Customer do
     field :email, :string
     field :phone, :string
     field :type, Ecto.Enum, values: [:individual, :business], default: :individual
-    field :status, Ecto.Enum, values: [:active, :inactive, :blocked], default: :active
+    field :status, Ecto.Enum, values: [:prospect, :active, :inactive, :blocked, :churned], default: :active
     field :address, :map
+    field :country, :string
+    field :industry, :string
     field :credit_limit, :decimal
     field :outstanding_balance, :decimal, default: Decimal.new("0")
     field :tags, {:array, :string}, default: []
@@ -26,7 +28,7 @@ defmodule SyncFlow.CRM.Schema.Customer do
   def changeset(c, attrs) do
     c
     |> cast(attrs, [:id, :org_id, :name, :email, :phone, :type, :status, :address,
-                    :credit_limit, :outstanding_balance, :tags, :metadata])
+                    :country, :industry, :credit_limit, :outstanding_balance, :tags, :metadata])
     |> validate_required([:id, :org_id, :name])
   end
 end

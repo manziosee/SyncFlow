@@ -11,12 +11,12 @@ if db_url do
     pool_size: 10
   ]
 
-  config :syncflow_core,     SyncFlow.Core.Repo,       shared
-  config :syncflow_accounting, SyncFlow.Accounting.Repo, shared
-  config :syncflow_inventory,  SyncFlow.Inventory.Repo,  shared
-  config :syncflow_hr,         SyncFlow.HR.Repo,         shared
-  config :syncflow_crm,        SyncFlow.CRM.Repo,        shared
-  config :syncflow_fleet,      SyncFlow.Fleet.Repo,      shared
+  config :syncflow_core,       SyncFlow.Core.Repo,       shared ++ [migration_source: "schema_migrations"]
+  config :syncflow_accounting,  SyncFlow.Accounting.Repo, shared ++ [migration_source: "schema_migrations_accounting"]
+  config :syncflow_inventory,   SyncFlow.Inventory.Repo,  shared ++ [migration_source: "schema_migrations_inventory"]
+  config :syncflow_hr,          SyncFlow.HR.Repo,         shared ++ [migration_source: "schema_migrations_hr"]
+  config :syncflow_crm,         SyncFlow.CRM.Repo,        shared ++ [migration_source: "schema_migrations_crm"]
+  config :syncflow_fleet,       SyncFlow.Fleet.Repo,      shared ++ [migration_source: "schema_migrations_fleet"]
 else
   db_host = System.get_env("PGHOST", "localhost")
   db_user = System.get_env("PGUSER", "postgres")

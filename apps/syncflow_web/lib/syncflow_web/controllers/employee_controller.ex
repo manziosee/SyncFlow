@@ -76,7 +76,17 @@ defmodule SyncFlow.Web.Controllers.EmployeeController do
   end
 
   def create(conn, params) do
-    attrs = Map.put(params, "org_id", conn.assigns.current_org_id)
+    attrs =
+      params
+      |> Map.put("org_id", conn.assigns.current_org_id)
+      |> Map.put_new("employment_type", "full_time")
+      |> Map.put_new("status", "active")
+      |> then(fn p ->
+        case Map.pop(p, "salary") do
+          {nil, p} -> p
+          {val, p} -> Map.put_new(p, "base_salary", val)
+        end
+      end)
 
     case Queries.create_employee(attrs) do
       {:ok, emp} ->

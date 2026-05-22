@@ -42,14 +42,14 @@ defmodule SyncFlow.Web.Router do
 
     # --- Accounting ---
     scope "/accounting" do
+      get "/invoices/stats", Controllers.InvoiceController, :stats
+      get "/invoices/overdue", Controllers.InvoiceController, :overdue
+      get "/revenue/monthly", Controllers.InvoiceController, :revenue_by_month
       resources "/invoices", Controllers.InvoiceController, except: [:new, :edit]
       post "/invoices/:id/submit", Controllers.InvoiceController, :submit
       post "/invoices/:id/approve", Controllers.InvoiceController, :approve
       post "/invoices/:id/reject", Controllers.InvoiceController, :reject
       post "/invoices/:id/void", Controllers.InvoiceController, :void
-      get "/invoices/stats", Controllers.InvoiceController, :stats
-      get "/invoices/overdue", Controllers.InvoiceController, :overdue
-      get "/revenue/monthly", Controllers.InvoiceController, :revenue_by_month
     end
 
     # --- Inventory ---
@@ -74,10 +74,10 @@ defmodule SyncFlow.Web.Router do
 
     # --- CRM ---
     scope "/crm" do
+      get "/customers/stats", Controllers.CustomerController, :stats
       resources "/customers", Controllers.CustomerController, except: [:new, :edit]
       post "/customers/:id/interactions", Controllers.CustomerController, :record_interaction
       get "/customers/:id/interactions", Controllers.CustomerController, :interactions
-      get "/customers/stats", Controllers.CustomerController, :stats
     end
 
     # --- Fleet ---

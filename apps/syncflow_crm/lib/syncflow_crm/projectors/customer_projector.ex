@@ -16,8 +16,10 @@ defmodule SyncFlow.CRM.Projectors.CustomerProjector do
       email: evt.email,
       phone: evt.phone,
       type: evt.type,
+      status: evt.status || :active,
       address: evt.address,
-      status: :active
+      country: evt.country,
+      industry: evt.industry
     })
   end)
 

@@ -1,7 +1,7 @@
 defmodule SyncFlow.CRM.Events do
   defmodule CustomerRegistered do
     @derive Jason.Encoder
-    defstruct [:customer_id, :org_id, :name, :email, :phone, :type, :address, :created_by, :created_at]
+    defstruct [:customer_id, :org_id, :name, :email, :phone, :type, :status, :address, :country, :industry, :created_by, :created_at]
   end
 
   defmodule CustomerUpdated do
