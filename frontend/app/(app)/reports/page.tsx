@@ -13,8 +13,6 @@ import clsx from 'clsx'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts'
-import * as M from '@/lib/mock-data'
-
 const REPORT_TYPES = [
   {
     type: 'monthly_revenue',
@@ -57,15 +55,6 @@ const REPORT_TYPES = [
     border: 'border-red-100',
   },
 ]
-
-// Mock results that appear after "generating"
-const MOCK_RESULTS: Record<string, unknown> = {
-  monthly_revenue: M.MOCK_REVENUE,
-  inventory_audit: M.MOCK_STOCK_ITEMS,
-  payroll_summary: M.MOCK_PAY_SLIPS,
-  fleet_utilization: M.MOCK_VEHICLES,
-  overdue_invoices: { data: M.MOCK_INVOICES.data.filter(i => i.status === 'overdue') },
-}
 
 interface ReportJob {
   id: string
@@ -151,19 +140,17 @@ export default function ReportsPage() {
     setJobs(prev => [{ id: jobId, type, status: 'queued', requestedAt: new Date() }, ...prev])
 
     try {
-      await reportsApi.generate(type)
-      // Simulate processing time then mark done with mock result
-      setTimeout(() => {
-        setJobs(prev => prev.map(j =>
-          j.id === jobId ? { ...j, status: 'done', result: MOCK_RESULTS[type] } : j
-        ))
-        setGenerating(null)
-        toast.success(`${REPORT_TYPES.find(r => r.type === type)?.label} report ready!`)
-      }, 2200)
+      const res = await reportsApi.generate(type)
+      const serverJobId = res.data?.job_id ?? jobId
+      setJobs(prev => prev.map(j =>
+        j.id === jobId ? { ...j, id: serverJobId, status: 'running' } : j
+      ))
+      toast.success(`${REPORT_TYPES.find(r => r.type === type)?.label} report queued — results will arrive in your notifications`)
     } catch {
       setJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: 'error' } : j))
-      setGenerating(null)
       toast.error('Failed to generate report')
+    } finally {
+      setGenerating(null)
     }
   }, [])
 

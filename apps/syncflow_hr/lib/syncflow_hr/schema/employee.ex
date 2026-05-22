@@ -1,5 +1,6 @@
 defmodule SyncFlow.HR.Schema.Employee do
   use Ecto.Schema
+  @derive {Jason.Encoder, except: [:__meta__]}
   import Ecto.Changeset
 
   @primary_key {:id, :binary_id, autogenerate: true}

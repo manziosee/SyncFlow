@@ -1,5 +1,6 @@
 defmodule SyncFlow.Core.Accounts.Organization do
   use Ecto.Schema
+  @derive {Jason.Encoder, except: [:__meta__]}
   import Ecto.Changeset
 
   @primary_key {:id, :binary_id, autogenerate: true}
@@ -26,9 +27,9 @@ defmodule SyncFlow.Core.Accounts.Organization do
     org
     |> cast(attrs, [:name, :slug, :country, :currency, :timezone, :tax_id,
                     :address, :logo_url, :settings, :plan])
+    |> slugify()
     |> validate_required([:name, :slug])
     |> unique_constraint(:slug)
-    |> slugify()
   end
 
   defp slugify(%Ecto.Changeset{changes: %{name: name}} = cs) when not is_nil(name) do

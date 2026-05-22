@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Eye, EyeOff, Loader2, ArrowRight, Sparkles, Mail, Lock } from 'lucide-react'
+import { Eye, EyeOff, Loader2, ArrowRight, Mail, Lock } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import toast from 'react-hot-toast'
 
@@ -45,27 +45,6 @@ export default function LoginPage() {
         </h1>
         <p className="text-slate-400 text-sm">Sign in to your SyncFlow workspace</p>
       </div>
-
-      {/* Demo shortcut */}
-      <button
-        type="button"
-        onClick={() => {
-          setForm({ email: 'admin@syncflow.io', password: 'password123' })
-          toast.success('Demo credentials filled — click Sign in')
-        }}
-        className="w-full mb-6 flex items-center gap-3 bg-orange-500/8 hover:bg-orange-500/14 border border-orange-500/25 hover:border-orange-500/50 rounded-2xl px-4 py-3.5 text-left transition-all group"
-      >
-        <div className="w-8 h-8 rounded-xl bg-orange-500/20 flex items-center justify-center shrink-0">
-          <Sparkles className="w-4 h-4 text-orange-400" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-orange-300 text-xs font-semibold group-hover:text-orange-200 transition-colors">
-            Try the live demo — click to fill credentials
-          </p>
-          <p className="text-slate-500 text-[11px] mt-0.5">admin@syncflow.io · password123</p>
-        </div>
-        <ArrowRight className="w-3.5 h-3.5 text-orange-500/50 group-hover:text-orange-400 group-hover:translate-x-0.5 transition-all shrink-0" />
-      </button>
 
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Email */}

@@ -64,7 +64,8 @@ defmodule SyncFlow.Web.Controllers.AuthController do
 
   def register(conn, params) do
     with {:ok, org} <- Accounts.create_organization(%{name: params["org_name"]}),
-         {:ok, user} <- Accounts.create_user(Map.put(params, "org_id", org.id)) do
+         user_attrs = Map.merge(params, %{"org_id" => org.id, "role" => "admin"}),
+         {:ok, user} <- Accounts.create_user(user_attrs) do
       {:ok, tokens} = Accounts.generate_tokens(user)
 
       conn

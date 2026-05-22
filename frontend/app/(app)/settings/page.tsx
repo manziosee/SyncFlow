@@ -41,7 +41,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
   )
 }
 
-const MOCK_API_KEYS = [
+const SAMPLE_API_KEYS = [
   { id: '1', name: 'Production key',    prefix: 'sf_live_xxx…', created: '2025-04-01', last_used: '2 hr ago',  scope: 'Read / Write' },
   { id: '2', name: 'Reporting service', prefix: 'sf_live_yyy…', created: '2025-03-15', last_used: '1 day ago', scope: 'Read only' },
 ]
@@ -596,7 +596,7 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="space-y-3">
-                  {MOCK_API_KEYS.map(k => (
+                  {SAMPLE_API_KEYS.map(k => (
                     <div key={k.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
                       <div className="flex items-start justify-between gap-3 mb-4">
                         <div>

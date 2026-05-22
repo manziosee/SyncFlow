@@ -1,5 +1,6 @@
 defmodule SyncFlow.Accounting.Schema.LedgerEntry do
   use Ecto.Schema
+  @derive {Jason.Encoder, except: [:__meta__]}
 
   @primary_key {:id, :binary_id, autogenerate: false}
 
