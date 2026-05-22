@@ -1,5 +1,6 @@
 defmodule SyncFlow.Accounting.Schema.Invoice do
   use Ecto.Schema
+  @derive {Jason.Encoder, except: [:__meta__]}
   import Ecto.Changeset
 
   @statuses ~w(draft pending_approval approved rejected voided paid)a

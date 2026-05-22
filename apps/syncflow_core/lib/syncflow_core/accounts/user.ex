@@ -1,5 +1,6 @@
 defmodule SyncFlow.Core.Accounts.User do
   use Ecto.Schema
+  @derive {Jason.Encoder, except: [:__meta__]}
   import Ecto.Changeset
 
   @roles ~w(superadmin admin manager accountant cashier warehouse_manager hr_manager

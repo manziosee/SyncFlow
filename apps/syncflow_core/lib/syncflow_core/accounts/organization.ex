@@ -1,5 +1,6 @@
 defmodule SyncFlow.Core.Accounts.Organization do
   use Ecto.Schema
+  @derive {Jason.Encoder, except: [:__meta__]}
   import Ecto.Changeset
 
   @primary_key {:id, :binary_id, autogenerate: true}

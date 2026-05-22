@@ -1,5 +1,6 @@
 defmodule SyncFlow.CRM.Schema.Customer do
   use Ecto.Schema
+  @derive {Jason.Encoder, except: [:__meta__]}
   import Ecto.Changeset
 
   @primary_key {:id, :binary_id, autogenerate: false}
@@ -32,6 +33,7 @@ end
 
 defmodule SyncFlow.CRM.Schema.Interaction do
   use Ecto.Schema
+  @derive {Jason.Encoder, except: [:__meta__]}
 
   @primary_key {:id, :binary_id, autogenerate: false}
 

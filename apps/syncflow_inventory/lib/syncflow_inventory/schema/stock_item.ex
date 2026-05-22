@@ -1,5 +1,6 @@
 defmodule SyncFlow.Inventory.Schema.StockItem do
   use Ecto.Schema
+  @derive {Jason.Encoder, except: [:__meta__]}
 
   @primary_key {:id, :binary_id, autogenerate: false}
 
@@ -26,6 +27,7 @@ end
 
 defmodule SyncFlow.Inventory.Schema.StockMovement do
   use Ecto.Schema
+  @derive {Jason.Encoder, except: [:__meta__]}
 
   @primary_key {:id, :binary_id, autogenerate: false}
 
@@ -45,6 +47,7 @@ end
 
 defmodule SyncFlow.Inventory.Schema.StockTransfer do
   use Ecto.Schema
+  @derive {Jason.Encoder, except: [:__meta__]}
 
   @primary_key {:id, :binary_id, autogenerate: false}
 
@@ -65,6 +68,7 @@ end
 
 defmodule SyncFlow.Inventory.Schema.Warehouse do
   use Ecto.Schema
+  @derive {Jason.Encoder, except: [:__meta__]}
   import Ecto.Changeset
 
   @primary_key {:id, :binary_id, autogenerate: true}

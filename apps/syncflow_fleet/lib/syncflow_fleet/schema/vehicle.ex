@@ -1,5 +1,6 @@
 defmodule SyncFlow.Fleet.Schema.Vehicle do
   use Ecto.Schema
+  @derive {Jason.Encoder, except: [:__meta__]}
 
   @primary_key {:id, :binary_id, autogenerate: false}
 
@@ -26,6 +27,7 @@ end
 
 defmodule SyncFlow.Fleet.Schema.Trip do
   use Ecto.Schema
+  @derive {Jason.Encoder, except: [:__meta__]}
 
   @primary_key {:id, :binary_id, autogenerate: false}
 
@@ -47,6 +49,7 @@ end
 
 defmodule SyncFlow.Fleet.Schema.FuelRecord do
   use Ecto.Schema
+  @derive {Jason.Encoder, except: [:__meta__]}
 
   @primary_key {:id, :binary_id, autogenerate: false}
 
