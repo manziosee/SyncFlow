@@ -57,23 +57,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const login = useCallback(async (email: string, password: string) => {
-    // Demo mode — bypass backend
-    const DEMO_CREDENTIALS = [
-      { email: 'admin@syncflow.io', password: 'password123' },
-      { email: 'manager@syncflow.io', password: 'password123' },
-    ]
-    const isDemo = DEMO_CREDENTIALS.some(c => c.email === email && c.password === password)
-
-    if (isDemo) {
-      const { MOCK_USER } = await import('./mock-data')
-      const demoUser = { ...MOCK_USER, email, name: email === 'manager@syncflow.io' ? 'Jane Manager' : MOCK_USER.name }
-      const fakeToken = 'demo-token-' + Date.now()
-      localStorage.setItem(TOKEN_KEY, fakeToken)
-      localStorage.setItem(USER_KEY, JSON.stringify(demoUser))
-      setState({ user: demoUser, token: fakeToken, isLoading: false, isAuthenticated: true })
-      return
-    }
-
     const res = await api.post('/api/auth/login', { email, password })
     const { user, access_token } = res.data.data
     localStorage.setItem(TOKEN_KEY, access_token)
