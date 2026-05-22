@@ -11,7 +11,10 @@ defmodule SyncFlow.CRM.Aggregates.Customer do
       email: cmd.email,
       phone: cmd.phone,
       type: cmd.type || :individual,
+      status: cmd.status || :active,
       address: cmd.address,
+      country: cmd.country,
+      industry: cmd.industry,
       created_by: cmd.created_by,
       created_at: DateTime.utc_now()
     }
@@ -52,7 +55,7 @@ defmodule SyncFlow.CRM.Aggregates.Customer do
   end
 
   def apply(%__MODULE__{} = c, %Events.CustomerRegistered{} = evt) do
-    %{c | customer_id: evt.customer_id, org_id: evt.org_id, name: evt.name, status: :active}
+    %{c | customer_id: evt.customer_id, org_id: evt.org_id, name: evt.name, status: evt.status || :active}
   end
 
   def apply(%__MODULE__{} = c, %Events.CustomerUpdated{changes: changes}) do

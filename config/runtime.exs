@@ -12,22 +12,27 @@ if config_env() == :prod do
   ssl = [verify: :verify_none]
 
   config :syncflow_core, SyncFlow.Core.Repo,
-    url: db_url, pool_size: pool, ssl: ssl
+    url: db_url, pool_size: pool, ssl: ssl, migration_source: "schema_migrations"
 
   config :syncflow_accounting, SyncFlow.Accounting.Repo,
-    url: System.get_env("ACCOUNTING_DB_URL", db_url), pool_size: pool, ssl: ssl
+    url: System.get_env("ACCOUNTING_DB_URL", db_url), pool_size: pool, ssl: ssl,
+    migration_source: "schema_migrations_accounting"
 
   config :syncflow_inventory, SyncFlow.Inventory.Repo,
-    url: System.get_env("INVENTORY_DB_URL", db_url), pool_size: pool, ssl: ssl
+    url: System.get_env("INVENTORY_DB_URL", db_url), pool_size: pool, ssl: ssl,
+    migration_source: "schema_migrations_inventory"
 
   config :syncflow_hr, SyncFlow.HR.Repo,
-    url: System.get_env("HR_DB_URL", db_url), pool_size: pool, ssl: ssl
+    url: System.get_env("HR_DB_URL", db_url), pool_size: pool, ssl: ssl,
+    migration_source: "schema_migrations_hr"
 
   config :syncflow_crm, SyncFlow.CRM.Repo,
-    url: System.get_env("CRM_DB_URL", db_url), pool_size: pool, ssl: ssl
+    url: System.get_env("CRM_DB_URL", db_url), pool_size: pool, ssl: ssl,
+    migration_source: "schema_migrations_crm"
 
   config :syncflow_fleet, SyncFlow.Fleet.Repo,
-    url: System.get_env("FLEET_DB_URL", db_url), pool_size: pool, ssl: ssl
+    url: System.get_env("FLEET_DB_URL", db_url), pool_size: pool, ssl: ssl,
+    migration_source: "schema_migrations_fleet"
 
   secret_key_base =
     System.get_env("SECRET_KEY_BASE") ||

@@ -110,7 +110,10 @@ defmodule SyncFlow.Web.Controllers.CustomerController do
       email: params["email"],
       phone: params["phone"],
       type: params["type"] || "individual",
+      status: params["status"] || "active",
       address: params["address"],
+      country: params["country"],
+      industry: params["industry"],
       created_by: conn.assigns.current_user.id
     }
 
