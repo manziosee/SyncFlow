@@ -5,7 +5,6 @@ defmodule SyncFlow.Web.Router do
 
   pipeline :api do
     plug :accepts, ["json"]
-    plug :fetch_session
     plug OpenApiSpex.Plug.PutApiSpec, module: SyncFlow.Web.ApiSpec
   end
 
