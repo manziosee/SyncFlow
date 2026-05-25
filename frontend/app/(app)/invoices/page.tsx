@@ -18,15 +18,15 @@ import {
 
 const STATUS_COLORS: Record<string, string> = {
   draft: 'badge-gray',
-  submitted: 'badge-blue',
+  pending_approval: 'badge-blue',
   approved: 'badge-green',
   rejected: 'badge-red',
   paid: 'badge-green',
-  overdue: 'badge-red',
+  voided: 'badge-gray',
   void: 'badge-gray',
 }
 
-const STATUS_ORDER = ['draft', 'submitted', 'approved', 'paid', 'overdue', 'rejected']
+const STATUS_ORDER = ['draft', 'pending_approval', 'approved', 'paid', 'rejected', 'voided']
 
 const fmtRwf = (n: number) =>
   new Intl.NumberFormat('en-RW', { maximumFractionDigits: 0 }).format(n) + ' RWF'
@@ -46,7 +46,7 @@ interface InvoiceFormData {
   customer_name: string
   customer_email: string
   due_date: string
-  line_items: { description: string; quantity: number; unit_price: number }[]
+  lines: { description: string; quantity: number; unit_price: number }[]
   notes: string
 }
 
@@ -87,7 +87,7 @@ function CreateInvoiceModal({ onClose }: { onClose: () => void }) {
     customer_name: '',
     customer_email: '',
     due_date: '',
-    line_items: [{ description: '', quantity: 1, unit_price: 0 }],
+    lines: [{ description: '', quantity: 1, unit_price: 0 }],
     notes: '',
   })
 
@@ -97,12 +97,12 @@ function CreateInvoiceModal({ onClose }: { onClose: () => void }) {
     onError: () => toast.error('Failed to create invoice'),
   })
 
-  const total = form.line_items.reduce((s, i) => s + i.quantity * i.unit_price, 0)
-  const addLine = () => setForm(f => ({ ...f, line_items: [...f.line_items, { description: '', quantity: 1, unit_price: 0 }] }))
+  const total = form.lines.reduce((s, i) => s + i.quantity * i.unit_price, 0)
+  const addLine = () => setForm(f => ({ ...f, lines: [...f.lines, { description: '', quantity: 1, unit_price: 0 }] }))
   const updateLine = (idx: number, field: string, value: string | number) =>
-    setForm(f => ({ ...f, line_items: f.line_items.map((l, i) => i === idx ? { ...l, [field]: value } : l) }))
+    setForm(f => ({ ...f, lines: f.lines.map((l, i) => i === idx ? { ...l, [field]: value } : l) }))
   const removeLine = (idx: number) =>
-    setForm(f => ({ ...f, line_items: f.line_items.filter((_, i) => i !== idx) }))
+    setForm(f => ({ ...f, lines: f.lines.filter((_, i) => i !== idx) }))
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -134,12 +134,12 @@ function CreateInvoiceModal({ onClose }: { onClose: () => void }) {
               <button type="button" onClick={addLine} className="text-xs text-orange-600 hover:text-orange-700 font-medium">+ Add line</button>
             </div>
             <div className="space-y-2">
-              {form.line_items.map((item, idx) => (
+              {form.lines.map((item, idx) => (
                 <div key={idx} className="flex gap-2 items-center">
                   <input className="input flex-1" placeholder="Description" value={item.description} onChange={e => updateLine(idx, 'description', e.target.value)} required />
                   <input className="input w-20" type="number" min="1" placeholder="Qty" value={item.quantity} onChange={e => updateLine(idx, 'quantity', Number(e.target.value))} />
                   <input className="input w-28" type="number" min="0" placeholder="Unit price" value={item.unit_price} onChange={e => updateLine(idx, 'unit_price', Number(e.target.value))} />
-                  {form.line_items.length > 1 && (
+                  {form.lines.length > 1 && (
                     <button type="button" onClick={() => removeLine(idx)} className="text-ink-muted hover:text-danger transition-colors shrink-0">
                       <XCircle className="w-4 h-4" />
                     </button>
@@ -212,7 +212,7 @@ export default function InvoicesPage() {
   })
 
   const totalRevenue = invoices.filter(i => i.status === 'paid').reduce((s, i) => s + Number(i.total_amount ?? 0), 0)
-  const pendingAmount = invoices.filter(i => i.status === 'submitted').reduce((s, i) => s + Number(i.total_amount ?? 0), 0)
+  const pendingAmount = invoices.filter(i => i.status === 'pending_approval').reduce((s, i) => s + Number(i.total_amount ?? 0), 0)
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -239,10 +239,10 @@ export default function InvoicesPage() {
         {/* ── Summary KPI cards ─────────────────── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: 'Draft',          value: invoices.filter(i => i.status === 'draft').length,     color: 'text-slate-500',    filter: 'draft' },
-            { label: 'Pending Review', value: invoices.filter(i => i.status === 'submitted').length, color: 'text-blue-600',     filter: 'submitted' },
-            { label: 'Paid',           value: invoices.filter(i => i.status === 'paid').length,      color: 'text-emerald-600',  filter: 'paid' },
-            { label: 'Overdue',        value: invoices.filter(i => i.status === 'overdue').length,   color: 'text-red-600',      filter: 'overdue' },
+            { label: 'Draft',          value: invoices.filter(i => i.status === 'draft').length,              color: 'text-slate-500',    filter: 'draft' },
+            { label: 'Pending Review', value: invoices.filter(i => i.status === 'pending_approval').length,   color: 'text-blue-600',     filter: 'pending_approval' },
+            { label: 'Paid',           value: invoices.filter(i => i.status === 'paid').length,               color: 'text-emerald-600',  filter: 'paid' },
+            { label: 'Approved',       value: invoices.filter(i => i.status === 'approved').length,           color: 'text-green-600',    filter: 'approved' },
           ].map(({ label, value, color, filter }) => (
             <button
               key={label}
@@ -334,8 +334,8 @@ export default function InvoicesPage() {
           </div>
           <select aria-label="Filter by status" className="input w-40" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
             <option value="">All statuses</option>
-            {['draft', 'submitted', 'approved', 'paid', 'overdue', 'rejected', 'void'].map(s => (
-              <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+            {['draft', 'pending_approval', 'approved', 'paid', 'rejected', 'voided'].map(s => (
+              <option key={s} value={s}>{s === 'pending_approval' ? 'Pending Review' : s.charAt(0).toUpperCase() + s.slice(1)}</option>
             ))}
           </select>
         </div>
@@ -396,7 +396,7 @@ export default function InvoicesPage() {
                         <Link href={`/invoices/${inv.id}`} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium border-slate-200 text-slate-500 hover:text-orange-700 hover:bg-orange-50 hover:border-orange-200 transition-all">
                           <Edit2 className="w-3.5 h-3.5" />Edit
                         </Link>
-                        {inv.status === 'submitted' && (
+                        {inv.status === 'pending_approval' && (
                           <ActionBtn
                             variant="approve"
                             label="Approve"

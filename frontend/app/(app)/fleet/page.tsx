@@ -30,17 +30,17 @@ const fmtDate = (d: string) =>
   new Date(d).toLocaleDateString('en-RW', { day: '2-digit', month: 'short', year: 'numeric' })
 
 const STATUS_BADGE: Record<string, string> = {
-  active: 'badge-green',
-  idle: 'badge-yellow',
+  available:   'badge-green',
+  on_trip:     'badge-blue',
   maintenance: 'badge-red',
-  retired: 'badge-gray',
+  inactive:    'badge-gray',
 }
 
 const STATUS_FILL: Record<string, string> = {
-  active: '#10b981',
-  idle: '#f59e0b',
+  available:   '#10b981',
+  on_trip:     '#3b82f6',
   maintenance: '#ef4444',
-  retired: '#94a3b8',
+  inactive:    '#94a3b8',
 }
 
 function ActionBtn({
@@ -67,13 +67,14 @@ function ActionBtn({
 }
 
 interface Vehicle {
-  id: string; plate: string; make: string; model: string; year: number
+  id: string; plate: string; plate_number?: string; make: string; model: string; year: number
   status: string; driver_name?: string; driver_id?: string
   current_lat?: number; current_lng?: number; last_seen?: string; fuel_type?: string
 }
 
 interface FuelRecord {
-  id: string; vehicle_id: string; liters: number; cost: number; odometer: number; filled_at: string
+  id: string; vehicle_id: string; liters: number; cost?: number; total_cost?: number; odometer: number;
+  filled_at?: string; logged_at?: string; inserted_at?: string
 }
 
 interface LivePosition {
@@ -82,7 +83,7 @@ interface LivePosition {
 
 function AddVehicleModal({ onClose }: { onClose: () => void }) {
   const qc = useQueryClient()
-  const [form, setForm] = useState({ plate: '', make: '', model: '', year: new Date().getFullYear(), fuel_type: 'petrol', status: 'idle' })
+  const [form, setForm] = useState({ plate_number: '', make: '', model: '', year: new Date().getFullYear(), type: 'sedan' })
 
   const mutation = useMutation({
     mutationFn: () => fleetApi.createVehicle(form as Record<string, unknown>),
@@ -100,7 +101,7 @@ function AddVehicleModal({ onClose }: { onClose: () => void }) {
         <div className="space-y-3">
           <div>
             <label htmlFor="v-plate" className="block text-xs font-medium text-ink-secondary mb-1">License Plate</label>
-            <input id="v-plate" className="input" value={form.plate} onChange={e => setForm(f => ({ ...f, plate: e.target.value }))} placeholder="RAA 000 A" required />
+            <input id="v-plate" className="input" value={form.plate_number} onChange={e => setForm(f => ({ ...f, plate_number: e.target.value }))} placeholder="RAA 000 A" required />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -118,16 +119,16 @@ function AddVehicleModal({ onClose }: { onClose: () => void }) {
               <input id="v-year" className="input" type="number" value={form.year} onChange={e => setForm(f => ({ ...f, year: Number(e.target.value) }))} />
             </div>
             <div>
-              <label htmlFor="v-fuel" className="block text-xs font-medium text-ink-secondary mb-1">Fuel Type</label>
-              <select id="v-fuel" className="input" value={form.fuel_type} onChange={e => setForm(f => ({ ...f, fuel_type: e.target.value }))}>
-                {['petrol', 'diesel', 'electric', 'hybrid'].map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
+              <label htmlFor="v-type" className="block text-xs font-medium text-ink-secondary mb-1">Vehicle Type</label>
+              <select id="v-type" className="input" value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
+                {['sedan', 'suv', 'truck', 'van', 'bus', 'motorcycle'].map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
               </select>
             </div>
           </div>
         </div>
         <div className="flex gap-2 mt-5">
           <button type="button" onClick={onClose} className="btn-ghost flex-1">Cancel</button>
-          <button type="button" onClick={() => mutation.mutate()} disabled={!form.plate || mutation.isPending} className="btn-primary flex-1 gap-2">
+          <button type="button" onClick={() => mutation.mutate()} disabled={!form.plate_number || mutation.isPending} className="btn-primary flex-1 gap-2">
             {mutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}Add Vehicle
           </button>
         </div>
@@ -139,8 +140,8 @@ function AddVehicleModal({ onClose }: { onClose: () => void }) {
 function LogFuelModal({ vehicles, onClose }: { vehicles: Vehicle[]; onClose: () => void }) {
   const qc = useQueryClient()
   const [form, setForm] = useState({
-    vehicle_id: vehicles[0]?.id ?? '', liters: 0, cost: 0, odometer: 0,
-    filled_at: new Date().toISOString().split('T')[0],
+    vehicle_id: vehicles[0]?.id ?? '', liters: 0, total_cost: 0, odometer: 0,
+    logged_at: new Date().toISOString().slice(0, 10),
   })
 
   const mutation = useMutation({
@@ -160,7 +161,7 @@ function LogFuelModal({ vehicles, onClose }: { vehicles: Vehicle[]; onClose: () 
           <div>
             <label htmlFor="fuel-vehicle" className="block text-xs font-medium text-ink-secondary mb-1">Vehicle</label>
             <select id="fuel-vehicle" className="input" value={form.vehicle_id} onChange={e => setForm(f => ({ ...f, vehicle_id: e.target.value }))}>
-              {vehicles.map(v => <option key={v.id} value={v.id}>{v.plate} — {v.make} {v.model}</option>)}
+              {vehicles.map(v => <option key={v.id} value={v.id}>{v.plate_number ?? v.plate} — {v.make} {v.model}</option>)}
             </select>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -170,7 +171,7 @@ function LogFuelModal({ vehicles, onClose }: { vehicles: Vehicle[]; onClose: () 
             </div>
             <div>
               <label htmlFor="fuel-cost" className="block text-xs font-medium text-ink-secondary mb-1">Cost (RWF)</label>
-              <input id="fuel-cost" className="input" type="number" min="0" placeholder="0" value={form.cost} onChange={e => setForm(f => ({ ...f, cost: Number(e.target.value) }))} />
+              <input id="fuel-cost" className="input" type="number" min="0" placeholder="0" value={form.total_cost} onChange={e => setForm(f => ({ ...f, total_cost: Number(e.target.value) }))} />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -180,7 +181,7 @@ function LogFuelModal({ vehicles, onClose }: { vehicles: Vehicle[]; onClose: () 
             </div>
             <div>
               <label htmlFor="fuel-date" className="block text-xs font-medium text-ink-secondary mb-1">Date</label>
-              <input id="fuel-date" className="input" type="date" value={form.filled_at} onChange={e => setForm(f => ({ ...f, filled_at: e.target.value }))} />
+              <input id="fuel-date" className="input" type="date" value={form.logged_at} onChange={e => setForm(f => ({ ...f, logged_at: e.target.value }))} />
             </div>
           </div>
         </div>
@@ -210,7 +211,7 @@ export default function FleetPage() {
 
   const { data: summary } = useQuery({
     queryKey: ['fleet-summary'],
-    queryFn: () => fleetApi.summary().then(r => r.data),
+    queryFn: () => fleetApi.summary().then(r => r.data?.data ?? r.data),
   })
 
   const { data: fuelData, isLoading: fuelLoading } = useQuery({
@@ -246,20 +247,20 @@ export default function FleetPage() {
   const vehicles: Vehicle[] = vehicleData ?? []
   const allFuelRecords: FuelRecord[] = fuelData ?? []
 
-  const activeCount = vehicles.filter(v => v.status === 'active').length
+  const activeCount = vehicles.filter(v => v.status === 'available').length
   const liveCount = Object.keys(livePositions).length
 
-  const statusPieData = ['active', 'idle', 'maintenance', 'retired']
-    .map(s => ({ name: s.charAt(0).toUpperCase() + s.slice(1), value: vehicles.filter(v => v.status === s).length, fill: STATUS_FILL[s] }))
+  const statusPieData = ['available', 'on_trip', 'maintenance', 'inactive']
+    .map(s => ({ name: s === 'on_trip' ? 'On Trip' : s.charAt(0).toUpperCase() + s.slice(1), value: vehicles.filter(v => v.status === s).length, fill: STATUS_FILL[s] }))
     .filter(d => d.value > 0)
 
   const fuelByVehicle = vehicles.map(v => ({
-    plate: v.plate.length > 8 ? v.plate.slice(0, 8) : v.plate,
-    cost: allFuelRecords.filter(r => r.vehicle_id === v.id).reduce((s, r) => s + r.cost, 0),
-    liters: allFuelRecords.filter(r => r.vehicle_id === v.id).reduce((s, r) => s + r.liters, 0),
+    plate: v.plate_number?.slice(0, 10) ?? v.plate?.slice(0, 10),
+    cost: allFuelRecords.filter(r => r.vehicle_id === v.id).reduce((s, r) => s + Number(r.total_cost ?? 0), 0),
+    liters: allFuelRecords.filter(r => r.vehicle_id === v.id).reduce((s, r) => s + Number(r.liters ?? 0), 0),
   })).filter(d => d.cost > 0)
 
-  const totalFuelCost = allFuelRecords.reduce((s, r) => s + r.cost, 0)
+  const totalFuelCost = allFuelRecords.reduce((s, r) => s + Number(r.total_cost ?? 0), 0)
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -446,7 +447,7 @@ export default function FleetPage() {
                             <Truck className="w-4 h-4 text-ink-muted" />
                           </div>
                           <div>
-                            <div className="font-mono font-bold text-ink">{v.plate}</div>
+                            <div className="font-mono font-bold text-ink">{v.plate_number ?? v.plate}</div>
                             <div className="text-xs text-ink-muted">{v.make} {v.model} · {v.year}</div>
                           </div>
                         </div>
@@ -556,9 +557,9 @@ export default function FleetPage() {
                 <h3 className="text-sm font-bold text-ink mb-4">Fuel Cost Trend</h3>
                 <ResponsiveContainer width="100%" height={160}>
                   <AreaChart data={allFuelRecords.slice(-12).map(r => ({
-                    date: new Date(r.filled_at).toLocaleDateString('en-RW', { day: '2-digit', month: 'short' }),
-                    cost: r.cost,
-                    liters: r.liters,
+                    date: new Date(r.logged_at ?? r.filled_at ?? r.inserted_at ?? '').toLocaleDateString('en-RW', { day: '2-digit', month: 'short' }),
+                    cost: Number(r.total_cost ?? 0),
+                    liters: Number(r.liters ?? 0),
                   }))} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
                     <defs>
                       <linearGradient id="fuelGrad" x1="0" y1="0" x2="0" y2="1">
@@ -599,12 +600,12 @@ export default function FleetPage() {
                   ) : allFuelRecords.map(rec => (
                     <tr key={rec.id}>
                       <td className="font-mono font-semibold text-ink">
-                        {vehicles.find(v => v.id === rec.vehicle_id)?.plate ?? rec.vehicle_id.slice(0, 8)}
+                        {vehicles.find(v => v.id === rec.vehicle_id)?.plate_number ?? vehicles.find(v => v.id === rec.vehicle_id)?.plate ?? rec.vehicle_id.slice(0, 8)}
                       </td>
-                      <td className="text-right font-semibold text-ink">{rec.liters.toFixed(1)} L</td>
-                      <td className="text-right text-ink-secondary">{fmtRwf(rec.cost)}</td>
-                      <td className="text-right text-ink-muted text-sm">{rec.odometer.toLocaleString()} km</td>
-                      <td className="text-ink-muted text-sm">{fmtDate(rec.filled_at)}</td>
+                      <td className="text-right font-semibold text-ink">{Number(rec.liters ?? 0).toFixed(1)} L</td>
+                      <td className="text-right text-ink-secondary">{fmtRwf(Number(rec.total_cost ?? 0))}</td>
+                      <td className="text-right text-ink-muted text-sm">{Number(rec.odometer ?? 0).toLocaleString()} km</td>
+                      <td className="text-ink-muted text-sm">{fmtDate(rec.logged_at ?? rec.filled_at ?? rec.inserted_at ?? '')}</td>
                     </tr>
                   ))}
                 </tbody>
