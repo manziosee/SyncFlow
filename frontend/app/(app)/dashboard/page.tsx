@@ -37,7 +37,7 @@ export default function DashboardPage() {
 
   const { data: ceo } = useQuery({
     queryKey: ['dashboard-ceo'],
-    queryFn: () => dashboardApi.ceo().then(r => r.data),
+    queryFn: () => dashboardApi.ceo().then(r => r.data?.data ?? r.data),
   })
 
   const { data: revenueRaw } = useQuery({
@@ -70,13 +70,22 @@ export default function DashboardPage() {
   const vehicleList: Record<string, unknown>[] = Array.isArray(vehicles) ? vehicles : []
   const itemList: Record<string, unknown>[] = Array.isArray(stockItems) ? stockItems : []
 
-  const totalRevenue = ceo?.total_revenue ?? 0
-  const paidCount = ceo?.invoice_stats?.paid ?? invoices.filter(i => i.status === 'paid').length
-  const overdueCount = ceo?.invoice_stats?.pending ?? invoices.filter(i => i.status === 'overdue').length
-  const empCount = ceo?.hr_stats?.total ?? empList.length
-  const activeVehicles = ceo?.fleet_stats?.active ?? vehicleList.filter(v => v.status === 'active').length
-  const totalVehicles = ceo?.fleet_stats?.total ?? vehicleList.length
-  const lowStockCount = ceo?.inventory_summary?.low_stock ?? itemList.filter(i => Number(i.quantity) <= Number(i.reorder_point)).length
+  const invoiceStats = (ceo as Record<string, unknown> | undefined)?.invoices as Record<string, unknown> | undefined
+  const fleetData = (ceo as Record<string, unknown> | undefined)?.fleet as Record<string, unknown> | undefined
+  const hrData = (ceo as Record<string, unknown> | undefined)?.hr as Record<string, unknown> | undefined
+  const inventoryData = (ceo as Record<string, unknown> | undefined)?.inventory as Record<string, unknown> | undefined
+  const statsByStatus = invoiceStats?.stats as Record<string, { count: number; total: string }> | undefined
+  const fleetByStatus = fleetData?.by_status as Record<string, number> | undefined
+  const deptMap = hrData?.headcount_by_department as Record<string, number> | undefined
+
+  const totalRevenue = Number(statsByStatus?.paid?.total ?? 0) + Number(statsByStatus?.approved?.total ?? 0)
+  const paidCount = statsByStatus?.paid?.count ?? invoices.filter(i => i.status === 'paid').length
+  const overdueCount = (invoiceStats?.overdue_count as number | undefined) ?? 0
+  const empCount = (hrData?.total_active as number | undefined) ?? empList.length
+  const activeVehicles = fleetByStatus?.available ?? vehicleList.filter(v => v.status === 'available').length
+  const totalVehicles = (fleetData?.total as number | undefined) ?? vehicleList.length
+  const lowStockCount = (inventoryData?.low_stock_count as number | undefined) ?? itemList.filter(i => Number(i.quantity) <= Number(i.reorder_point)).length
+
 
   const monthlyData = MONTHS.map((name, idx) => {
     const entry = Array.isArray(revenueRaw)
@@ -88,16 +97,18 @@ export default function DashboardPage() {
   const maxRevenue = Math.max(...monthlyData.map(d => d.revenue), 1)
 
   const invoiceStatusData = [
-    { status: 'Paid',     count: ceo?.invoice_stats?.paid ?? invoices.filter(i => i.status === 'paid').length,     fill: '#10b981', dotClass: 'bg-emerald-500' },
-    { status: 'Pending',  count: ceo?.invoice_stats?.pending ?? invoices.filter(i => i.status === 'submitted').length, fill: '#f59e0b', dotClass: 'bg-amber-500' },
-    { status: 'Draft',    count: ceo?.invoice_stats?.draft ?? invoices.filter(i => i.status === 'draft').length,   fill: '#94a3b8', dotClass: 'bg-slate-400' },
-    { status: 'Overdue',  count: invoices.filter(i => i.status === 'overdue').length,                                fill: '#ef4444', dotClass: 'bg-red-500' },
+    { status: 'Paid',     count: statsByStatus?.paid?.count ?? invoices.filter(i => i.status === 'paid').length,                         fill: '#10b981', dotClass: 'bg-emerald-500' },
+    { status: 'Pending',  count: statsByStatus?.pending_approval?.count ?? invoices.filter(i => i.status === 'pending_approval').length,  fill: '#f59e0b', dotClass: 'bg-amber-500' },
+    { status: 'Approved', count: statsByStatus?.approved?.count ?? invoices.filter(i => i.status === 'approved').length,                  fill: '#3b82f6', dotClass: 'bg-blue-500' },
+    { status: 'Draft',    count: statsByStatus?.draft?.count ?? invoices.filter(i => i.status === 'draft').length,                        fill: '#94a3b8', dotClass: 'bg-slate-400' },
+    { status: 'Overdue',  count: overdueCount,                                                                                             fill: '#ef4444', dotClass: 'bg-red-500' },
   ].filter(d => d.count > 0)
 
   const fleetStatusData = [
-    { name: 'Active',      value: ceo?.fleet_stats?.active ?? vehicleList.filter(v => v.status === 'active').length,      fill: '#10b981' },
-    { name: 'Idle',        value: ceo?.fleet_stats?.idle ?? vehicleList.filter(v => v.status === 'idle').length,          fill: '#f59e0b' },
-    { name: 'Maintenance', value: ceo?.fleet_stats?.maintenance ?? vehicleList.filter(v => v.status === 'maintenance').length, fill: '#ef4444' },
+    { name: 'Available',   value: fleetByStatus?.available ?? vehicleList.filter(v => v.status === 'available').length,   fill: '#10b981' },
+    { name: 'On Trip',     value: fleetByStatus?.on_trip ?? vehicleList.filter(v => v.status === 'on_trip').length,        fill: '#f59e0b' },
+    { name: 'Maintenance', value: fleetByStatus?.maintenance ?? vehicleList.filter(v => v.status === 'maintenance').length,fill: '#ef4444' },
+    { name: 'Inactive',    value: fleetByStatus?.inactive ?? vehicleList.filter(v => v.status === 'inactive').length,      fill: '#94a3b8' },
   ].filter(d => d.value > 0)
 
   const deptData = Object.entries(
@@ -109,6 +120,8 @@ export default function DashboardPage() {
   ).map(([dept, count]) => ({ dept: dept.length > 10 ? dept.slice(0, 9) + '…' : dept, count }))
     .sort((a, b) => b.count - a.count)
     .slice(0, 6)
+
+  const deptCount = deptMap ? Object.keys(deptMap).length : deptData.length
 
   return (
     <div className="flex flex-col h-full overflow-hidden bg-slate-50">
@@ -266,7 +279,7 @@ export default function DashboardPage() {
               value: String(empCount),
               icon: Users,
               color: 'bg-blue-500',
-              change: `${ceo?.hr_stats?.departments ?? '—'} depts`,
+              change: `${deptCount} depts`,
               positive: true,
             },
             {
@@ -274,7 +287,7 @@ export default function DashboardPage() {
               value: `${activeVehicles}/${totalVehicles}`,
               icon: Truck,
               color: 'bg-violet-500',
-              change: `${ceo?.fleet_stats?.gps_active ?? '—'} GPS live`,
+              change: `${(fleetData?.active_on_gps as number | undefined) ?? '—'} GPS live`,
               positive: true,
             },
             {
@@ -282,7 +295,7 @@ export default function DashboardPage() {
               value: String(lowStockCount),
               icon: AlertTriangle,
               color: lowStockCount > 0 ? 'bg-red-500' : 'bg-slate-400',
-              change: `${ceo?.inventory_summary?.total_items ?? itemList.length} total items`,
+              change: `${(inventoryData?.total_items as number | undefined) ?? itemList.length} total items`,
               positive: lowStockCount === 0,
             },
           ].map(({ label, value, icon: Icon, color, change, positive }) => (
@@ -381,7 +394,7 @@ export default function DashboardPage() {
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
             <div className="mb-4">
               <h2 className="text-base font-bold text-slate-900">Team by Department</h2>
-              <p className="text-xs text-slate-500 mt-0.5">{empCount} employees across {ceo?.hr_stats?.departments ?? deptData.length} teams</p>
+              <p className="text-xs text-slate-500 mt-0.5">{empCount} employees across {deptCount} teams</p>
             </div>
             {deptData.length === 0 ? (
               <div className="h-[180px] flex items-center justify-center text-slate-400 text-sm">
@@ -425,7 +438,7 @@ export default function DashboardPage() {
                     <div key={d.name} className="flex items-center gap-1.5 text-xs text-slate-500">
                       <span className={clsx(
                         'w-2 h-2 rounded-full',
-                        d.name === 'Active' ? 'bg-emerald-500' : d.name === 'Idle' ? 'bg-amber-500' : 'bg-red-500',
+                        d.name === 'Available' ? 'bg-emerald-500' : d.name === 'On Trip' ? 'bg-amber-500' : d.name === 'Maintenance' ? 'bg-red-500' : 'bg-slate-400',
                       )} />
                       {d.name} <span className="font-bold text-slate-800">{d.value}</span>
                     </div>
@@ -452,8 +465,8 @@ export default function DashboardPage() {
                   <div className={clsx(
                     'w-2 h-2 rounded-full shrink-0',
                     inv.status === 'paid' ? 'bg-emerald-500'
-                      : inv.status === 'overdue' ? 'bg-red-500'
-                      : inv.status === 'submitted' ? 'bg-amber-500'
+                      : inv.status === 'approved' ? 'bg-blue-500'
+                      : inv.status === 'pending_approval' ? 'bg-amber-500'
                       : 'bg-slate-300',
                   )} />
                   <div className="flex-1 min-w-0">

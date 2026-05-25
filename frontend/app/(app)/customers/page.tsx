@@ -212,7 +212,7 @@ export default function CustomersPage() {
 
   const { data: statsData } = useQuery({
     queryKey: ['crm-stats'],
-    queryFn: () => crmApi.stats().then(r => r.data),
+    queryFn: () => crmApi.stats().then(r => r.data?.data ?? r.data),
   })
 
   const customers: Customer[] = custData ?? []

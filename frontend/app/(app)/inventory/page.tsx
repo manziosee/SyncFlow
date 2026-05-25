@@ -77,8 +77,11 @@ interface StockItem {
 interface WarehouseType {
   id: string
   name: string
-  location?: string
-  capacity?: number
+  code?: string
+  address?: Record<string, string>
+  is_active?: boolean
+  latitude?: number
+  longitude?: number
 }
 
 /* ── View Item Modal ───────────────────────────────────────── */
@@ -264,7 +267,8 @@ function ViewWarehouseModal({ wh, items, lowStock, onClose, onEdit }: {
             </div>
             <div>
               <h3 className="font-bold text-slate-900 text-base">{wh.name}</h3>
-              {wh.location && <p className="text-xs text-slate-500 flex items-center gap-1"><MapPin className="w-3 h-3" />{wh.location}</p>}
+              {wh.code && <p className="text-xs text-slate-400 font-mono">{wh.code}</p>}
+              {wh.address?.city && <p className="text-xs text-slate-500 flex items-center gap-1"><MapPin className="w-3 h-3" />{wh.address.city}{wh.address.country ? `, ${wh.address.country}` : ''}</p>}
             </div>
           </div>
           <button type="button" onClick={onClose} aria-label="Close" className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
@@ -316,10 +320,21 @@ function ViewWarehouseModal({ wh, items, lowStock, onClose, onEdit }: {
 /* ── Edit Warehouse Modal ───────────────────────────────────── */
 function EditWarehouseModal({ wh, onClose }: { wh: WarehouseType; onClose: () => void }) {
   const qc = useQueryClient()
-  const [form, setForm] = useState({ name: wh.name, location: wh.location ?? '', capacity: wh.capacity ?? 0 })
+  const [form, setForm] = useState({
+    name: wh.name,
+    code: wh.code ?? '',
+    city: wh.address?.city ?? '',
+    country: wh.address?.country ?? '',
+  })
 
   const mutation = useMutation({
-    mutationFn: async () => { await inventoryApi.updateWarehouse(wh.id, form as Record<string, unknown>) },
+    mutationFn: async () => {
+      const payload: Record<string, unknown> = { name: form.name, code: form.code }
+      if (form.city || form.country) {
+        payload.address = { city: form.city, country: form.country }
+      }
+      await inventoryApi.updateWarehouse(wh.id, payload)
+    },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['warehouses'] }); toast.success('Warehouse updated'); onClose() },
     onError: () => toast.error('Update failed'),
   })
@@ -339,12 +354,18 @@ function EditWarehouseModal({ wh, onClose }: { wh: WarehouseType; onClose: () =>
             <input id="wh-name" className="input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Main Warehouse" />
           </div>
           <div>
-            <label htmlFor="wh-location" className="block text-xs font-medium text-slate-600 mb-1">Location</label>
-            <input id="wh-location" className="input" value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} placeholder="Kigali, Rwanda" />
+            <label htmlFor="wh-code" className="block text-xs font-medium text-slate-600 mb-1">Code</label>
+            <input id="wh-code" className="input font-mono" value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value }))} placeholder="WH-KGL-01" />
           </div>
-          <div>
-            <label htmlFor="wh-capacity" className="block text-xs font-medium text-slate-600 mb-1">Capacity (units)</label>
-            <input id="wh-capacity" className="input" type="number" min="0" value={form.capacity} onChange={e => setForm(f => ({ ...f, capacity: Number(e.target.value) }))} placeholder="1000" />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="wh-city" className="block text-xs font-medium text-slate-600 mb-1">City</label>
+              <input id="wh-city" className="input" value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} placeholder="Kigali" />
+            </div>
+            <div>
+              <label htmlFor="wh-country" className="block text-xs font-medium text-slate-600 mb-1">Country</label>
+              <input id="wh-country" className="input" value={form.country} onChange={e => setForm(f => ({ ...f, country: e.target.value }))} placeholder="Rwanda" />
+            </div>
           </div>
         </div>
         <div className="flex gap-2 mt-5">
@@ -517,7 +538,7 @@ export default function InventoryPage() {
 
   const { data: valueData } = useQuery({
     queryKey: ['inventory-value'],
-    queryFn: () => inventoryApi.inventoryValue().then(r => r.data),
+    queryFn: () => inventoryApi.inventoryValue().then(r => r.data?.data ?? r.data),
   })
 
   const deleteItemMutation = useMutation({
@@ -742,9 +763,10 @@ export default function InventoryPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold text-ink">{wh.name}</div>
-                    {wh.location && (
+                    {wh.code && <div className="text-xs text-ink-muted font-mono">{wh.code}</div>}
+                    {wh.address?.city && (
                       <div className="text-xs text-ink-muted flex items-center gap-1 mt-0.5">
-                        <MapPin className="w-3 h-3" />{wh.location}
+                        <MapPin className="w-3 h-3" />{wh.address.city}
                       </div>
                     )}
                   </div>

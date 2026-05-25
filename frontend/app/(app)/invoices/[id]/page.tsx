@@ -24,11 +24,11 @@ const fmtDate = (d: string) =>
 
 const STATUS_COLORS: Record<string, string> = {
   draft: 'badge-gray',
-  submitted: 'badge-blue',
+  pending_approval: 'badge-blue',
   approved: 'badge-green',
   paid: 'badge-green',
   rejected: 'badge-red',
-  overdue: 'badge-red',
+  voided: 'badge-gray',
   void: 'badge-gray',
 }
 
@@ -135,7 +135,7 @@ export default function InvoiceDetailPage() {
     )
   }
 
-  const lineItems: { description: string; quantity: number; unit_price: number }[] = invoice.line_items ?? []
+  const lineItems: { description: string; quantity: number; unit_price: number }[] = invoice.lines ?? invoice.line_items ?? []
   const total = lineItems.reduce((s: number, i) => s + i.quantity * i.unit_price, 0)
 
   return (
@@ -179,7 +179,7 @@ export default function InvoiceDetailPage() {
                 Submit for Approval
               </button>
             )}
-            {invoice.status === 'submitted' && (
+            {invoice.status === 'pending_approval' && (
               <>
                 <button onClick={() => approveMutation.mutate()} disabled={approveMutation.isPending} className="btn-primary gap-2">
                   {approveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
@@ -191,7 +191,7 @@ export default function InvoiceDetailPage() {
                 </button>
               </>
             )}
-            {!['void', 'paid'].includes(invoice.status) && (
+            {!['voided', 'void', 'paid'].includes(invoice.status) && (
               <button onClick={() => voidMutation.mutate()} className="btn-ghost text-sm">
                 Void
               </button>

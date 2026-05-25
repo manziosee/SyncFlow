@@ -54,12 +54,12 @@ defmodule SyncFlow.Web.Router do
 
     # --- Inventory ---
     scope "/inventory" do
-      resources "/warehouses", Controllers.WarehouseController, except: [:new, :edit]
       get "/warehouses/value", Controllers.WarehouseController, :inventory_value
+      resources "/warehouses", Controllers.WarehouseController, except: [:new, :edit]
+      get "/stock-items/low-stock", Controllers.StockItemController, :low_stock
       resources "/stock-items", Controllers.StockItemController, except: [:new, :edit]
       post "/stock-items/:id/adjust", Controllers.StockItemController, :adjust
       post "/stock-items/:id/transfer", Controllers.StockItemController, :transfer
-      get "/stock-items/low-stock", Controllers.StockItemController, :low_stock
     end
 
     # --- HR ---
@@ -82,10 +82,10 @@ defmodule SyncFlow.Web.Router do
 
     # --- Fleet ---
     scope "/fleet" do
-      resources "/vehicles", Controllers.VehicleController, except: [:new, :edit]
-      post "/vehicles/:id/assign-driver", Controllers.VehicleController, :assign_driver
       get "/vehicles/live", Controllers.VehicleController, :live_positions
       get "/vehicles/summary", Controllers.VehicleController, :summary
+      resources "/vehicles", Controllers.VehicleController, except: [:new, :edit]
+      post "/vehicles/:id/assign-driver", Controllers.VehicleController, :assign_driver
       resources "/trips", Controllers.TripController, only: [:index, :show]
       get "/fuel", Controllers.FuelController, :index
       post "/fuel", Controllers.FuelController, :log

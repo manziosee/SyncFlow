@@ -440,7 +440,7 @@ export default function HRPage() {
 
   const { data: headcount } = useQuery({
     queryKey: ['headcount'],
-    queryFn: () => hrApi.headcount().then(r => r.data),
+    queryFn: () => hrApi.headcount().then(r => r.data?.data ?? r.data),
   })
 
   const { data: payrollData, isLoading: payrollLoading } = useQuery({
