@@ -35,7 +35,7 @@ interface Employee {
   email: string
   department: string
   position: string
-  salary: number
+  base_salary: number
   status: string
   hire_date?: string
 }
@@ -127,7 +127,7 @@ function ViewEmployeeModal({ emp, onClose, onEdit }: { emp: Employee; onClose: (
                 <TrendingUp className="w-4 h-4 text-orange-500" />
                 Gross Monthly Salary
               </div>
-              <span className="font-extrabold text-orange-600">{fmtRwf(emp.salary)}</span>
+              <span className="font-extrabold text-orange-600">{fmtRwf(Number(emp.base_salary ?? 0))}</span>
             </div>
           </div>
         </div>
@@ -148,7 +148,7 @@ function EditEmployeeModal({ emp, onClose }: { emp: Employee; onClose: () => voi
     email: emp.email,
     department: emp.department,
     position: emp.position,
-    salary: emp.salary,
+    base_salary: emp.base_salary,
     status: emp.status,
     hire_date: emp.hire_date ?? '',
   })
@@ -192,7 +192,7 @@ function EditEmployeeModal({ emp, onClose }: { emp: Employee; onClose: () => voi
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label htmlFor="edit-emp-salary" className="block text-xs font-medium text-slate-600 mb-1">Gross Salary (RWF)</label>
-              <input id="edit-emp-salary" className="input" type="number" min="0" value={form.salary} onChange={e => setForm(f => ({ ...f, salary: Number(e.target.value) }))} />
+              <input id="edit-emp-salary" className="input" type="number" min="0" value={form.base_salary} onChange={e => setForm(f => ({ ...f, base_salary: Number(e.target.value) }))} />
             </div>
             <div>
               <label htmlFor="edit-emp-status" className="block text-xs font-medium text-slate-600 mb-1">Status</label>
@@ -316,7 +316,7 @@ function DeleteConfirmModal({
 /* ── Add Employee Modal ─────────────────────────────────────── */
 function AddEmployeeModal({ onClose }: { onClose: () => void }) {
   const qc = useQueryClient()
-  const [form, setForm] = useState({ name: '', email: '', department: '', position: '', salary: 0, hire_date: '' })
+  const [form, setForm] = useState({ name: '', email: '', department: '', position: '', base_salary: 0, hire_date: '' })
 
   const mutation = useMutation({
     mutationFn: async () => { await hrApi.createEmployee(form as Record<string, unknown>) },
@@ -355,7 +355,7 @@ function AddEmployeeModal({ onClose }: { onClose: () => void }) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label htmlFor="emp-salary" className="block text-xs font-medium text-slate-600 mb-1">Gross Salary (RWF)</label>
-              <input id="emp-salary" className="input" type="number" min="0" value={form.salary} onChange={e => setForm(f => ({ ...f, salary: Number(e.target.value) }))} />
+              <input id="emp-salary" className="input" type="number" min="0" value={form.base_salary} onChange={e => setForm(f => ({ ...f, base_salary: Number(e.target.value) }))} />
             </div>
             <div>
               <label htmlFor="emp-hire" className="block text-xs font-medium text-slate-600 mb-1">Hire Date</label>
@@ -483,14 +483,14 @@ export default function HRPage() {
   const payrollRuns: PayrollRun[] = payrollData ?? []
   const paySlips: Record<string, unknown>[] = paySlipsData ?? []
   const departments = [...new Set(employees.map(e => e.department).filter(Boolean))]
-  const totalPayroll = employees.reduce((s, e) => s + e.salary, 0)
+  const totalPayroll = employees.reduce((s, e) => s + Number(e.base_salary ?? 0), 0)
 
   const deptChartData = Object.entries(
     employees.reduce<Record<string, { count: number; payroll: number }>>((acc, emp) => {
       const dept = emp.department || 'Other'
       if (!acc[dept]) acc[dept] = { count: 0, payroll: 0 }
       acc[dept].count += 1
-      acc[dept].payroll += emp.salary
+      acc[dept].payroll += Number(emp.base_salary ?? 0)
       return acc
     }, {})
   ).map(([dept, v]) => ({ dept: dept.length > 10 ? dept.slice(0, 9) + '…' : dept, ...v }))
@@ -699,7 +699,7 @@ export default function HRPage() {
                     </td>
                     <td><span className="text-sm text-ink-secondary">{emp.department || '—'}</span></td>
                     <td><span className="text-sm text-ink-secondary">{emp.position || '—'}</span></td>
-                    <td className="text-right"><span className="font-semibold text-ink">{fmtRwf(emp.salary)}</span></td>
+                    <td className="text-right"><span className="font-semibold text-ink">{fmtRwf(Number(emp.base_salary ?? 0))}</span></td>
                     <td>
                       <span className={emp.status === 'active' ? 'badge badge-green' : 'badge badge-gray'}>
                         {emp.status === 'active' ? 'Active' : 'Inactive'}

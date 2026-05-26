@@ -14,11 +14,18 @@ defmodule SyncFlow.Accounting.Projectors.InvoiceProjector do
   alias SyncFlow.Accounting.Schema.Invoice
 
   project(%Events.InvoiceCreated{} = evt, _metadata, fn multi ->
+    # Generate a human-readable invoice number: INV-YYYY-XXXXXXXX
+    year = Date.utc_today().year
+    suffix = evt.invoice_id |> String.replace("-", "") |> String.slice(0, 8) |> String.upcase()
+    invoice_number = "INV-#{year}-#{suffix}"
+
     invoice = %Invoice{
       id: evt.invoice_id,
       org_id: evt.org_id,
+      invoice_number: invoice_number,
       customer_id: evt.customer_id,
       customer_name: evt.customer_name,
+      customer_email: evt.customer_email,
       currency: evt.currency,
       due_date: evt.due_date,
       lines: evt.lines || [],

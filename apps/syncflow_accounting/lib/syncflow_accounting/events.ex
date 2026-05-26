@@ -2,7 +2,7 @@ defmodule SyncFlow.Accounting.Events do
   defmodule InvoiceCreated do
     @derive Jason.Encoder
     defstruct [
-      :invoice_id, :org_id, :customer_id, :customer_name,
+      :invoice_id, :org_id, :customer_id, :customer_name, :customer_email,
       :currency, :due_date, :lines, :notes, :created_by, :created_at
     ]
   end
