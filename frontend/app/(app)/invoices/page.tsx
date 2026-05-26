@@ -6,7 +6,7 @@ import {
   Plus, Search, Eye, CheckCircle, XCircle, FileText,
   RefreshCw, Loader2, Edit2, Trash2, TrendingUp,
 } from 'lucide-react'
-import { invoicesApi } from '@/lib/api'
+import { invoicesApi, crmApi } from '@/lib/api'
 import PageHeroHeader, { HeroButton } from '@/components/dashboard/PageHeroHeader'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
@@ -43,11 +43,19 @@ const fmtDate = (d: string) =>
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 interface InvoiceFormData {
+  customer_id: string
   customer_name: string
   customer_email: string
   due_date: string
   lines: { description: string; quantity: number; unit_price: number }[]
   notes: string
+}
+
+interface CrmCustomer {
+  id: string
+  name: string
+  email?: string
+  company?: string
 }
 
 function ActionBtn({
@@ -84,12 +92,21 @@ function ActionBtn({
 function CreateInvoiceModal({ onClose }: { onClose: () => void }) {
   const qc = useQueryClient()
   const [form, setForm] = useState<InvoiceFormData>({
+    customer_id: '',
     customer_name: '',
     customer_email: '',
     due_date: '',
     lines: [{ description: '', quantity: 1, unit_price: 0 }],
     notes: '',
   })
+  const [customerSearch, setCustomerSearch] = useState('')
+
+  const { data: customersData } = useQuery({
+    queryKey: ['crm-customers-picker', customerSearch],
+    queryFn: () => crmApi.customers(customerSearch ? { search: customerSearch } : undefined)
+      .then(r => (r.data?.data ?? r.data ?? []) as CrmCustomer[]),
+  })
+  const crmCustomers: CrmCustomer[] = customersData ?? []
 
   const mutation = useMutation({
     mutationFn: (data: Record<string, unknown>) => invoicesApi.create(data),
@@ -104,6 +121,11 @@ function CreateInvoiceModal({ onClose }: { onClose: () => void }) {
   const removeLine = (idx: number) =>
     setForm(f => ({ ...f, lines: f.lines.filter((_, i) => i !== idx) }))
 
+  const pickCustomer = (c: CrmCustomer) => {
+    setForm(f => ({ ...f, customer_id: c.id, customer_name: c.name, customer_email: c.email ?? '' }))
+    setCustomerSearch('')
+  }
+
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -114,6 +136,44 @@ function CreateInvoiceModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
         <form onSubmit={e => { e.preventDefault(); mutation.mutate({ ...form, total_amount: total }) }} className="p-6 space-y-4">
+          {/* CRM customer picker */}
+          <div>
+            <label className="block text-xs font-medium text-ink-secondary mb-1">Pick from CRM (optional)</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-muted" />
+              <input
+                className="input pl-9"
+                placeholder="Search existing customers…"
+                value={customerSearch}
+                onChange={e => setCustomerSearch(e.target.value)}
+              />
+            </div>
+            {customerSearch && crmCustomers.length > 0 && (
+              <div className="mt-1 border border-slate-200 rounded-xl overflow-hidden shadow-lg max-h-36 overflow-y-auto">
+                {crmCustomers.slice(0, 8).map(c => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => pickCustomer(c)}
+                    className="w-full text-left px-3 py-2 hover:bg-orange-50 transition-colors flex items-center justify-between gap-2"
+                  >
+                    <div>
+                      <span className="text-sm font-medium text-ink">{c.name}</span>
+                      {c.company && <span className="text-xs text-ink-muted ml-1.5">· {c.company}</span>}
+                    </div>
+                    {c.email && <span className="text-xs text-ink-muted">{c.email}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+            {form.customer_id && (
+              <div className="mt-1.5 flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 rounded-lg px-3 py-1.5">
+                <CheckCircle className="w-3.5 h-3.5 shrink-0" />
+                Linked to CRM customer
+                <button type="button" className="ml-auto text-ink-muted hover:text-red-500" onClick={() => setForm(f => ({ ...f, customer_id: '' }))}>×</button>
+              </div>
+            )}
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-ink-secondary mb-1">Customer Name</label>

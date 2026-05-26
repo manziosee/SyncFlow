@@ -6,6 +6,7 @@ defmodule SyncFlow.Accounting.Commands do
       :org_id,
       :customer_id,
       :customer_name,
+      :customer_email,
       :currency,
       :due_date,
       :lines,

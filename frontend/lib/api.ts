@@ -157,6 +157,8 @@ export const fleetApi = {
     api.get(`/api/fleet/vehicles/${id}`),
   createVehicle: (data: Record<string, unknown>) =>
     api.post('/api/fleet/vehicles', data),
+  updateVehicle: (id: string, data: Record<string, unknown>) =>
+    api.put(`/api/fleet/vehicles/${id}`, data),
   assignDriver: (id: string, data: { driver_id: string; driver_name: string }) =>
     api.post(`/api/fleet/vehicles/${id}/assign-driver`, data),
   livePositions: () =>

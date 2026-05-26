@@ -81,9 +81,12 @@ interface LivePosition {
   vehicle_id: string; plate: string; lat: number; lng: number; speed: number; heading: number; timestamp: string
 }
 
+const VEHICLE_TYPES = ['truck', 'van', 'motorcycle', 'car', 'bus'] as const
+const VEHICLE_STATUSES = ['available', 'on_trip', 'maintenance', 'inactive'] as const
+
 function AddVehicleModal({ onClose }: { onClose: () => void }) {
   const qc = useQueryClient()
-  const [form, setForm] = useState({ plate_number: '', make: '', model: '', year: new Date().getFullYear(), type: 'sedan' })
+  const [form, setForm] = useState({ plate_number: '', make: '', model: '', year: new Date().getFullYear(), type: 'car' })
 
   const mutation = useMutation({
     mutationFn: () => fleetApi.createVehicle(form as Record<string, unknown>),
@@ -121,7 +124,7 @@ function AddVehicleModal({ onClose }: { onClose: () => void }) {
             <div>
               <label htmlFor="v-type" className="block text-xs font-medium text-ink-secondary mb-1">Vehicle Type</label>
               <select id="v-type" className="input" value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
-                {['sedan', 'suv', 'truck', 'van', 'bus', 'motorcycle'].map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
+                {VEHICLE_TYPES.map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
               </select>
             </div>
           </div>
@@ -130,6 +133,74 @@ function AddVehicleModal({ onClose }: { onClose: () => void }) {
           <button type="button" onClick={onClose} className="btn-ghost flex-1">Cancel</button>
           <button type="button" onClick={() => mutation.mutate()} disabled={!form.plate_number || mutation.isPending} className="btn-primary flex-1 gap-2">
             {mutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}Add Vehicle
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function EditVehicleModal({ vehicle, onClose }: { vehicle: Vehicle; onClose: () => void }) {
+  const qc = useQueryClient()
+  const [form, setForm] = useState({
+    plate_number: vehicle.plate_number ?? vehicle.plate ?? '',
+    make: vehicle.make ?? '',
+    model: vehicle.model ?? '',
+    year: vehicle.year ?? new Date().getFullYear(),
+    status: vehicle.status ?? 'available',
+  })
+
+  const mutation = useMutation({
+    mutationFn: () => fleetApi.updateVehicle(vehicle.id, form as Record<string, unknown>),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['vehicles'] }); toast.success('Vehicle updated'); onClose() },
+    onError: () => toast.error('Failed to update vehicle'),
+  })
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="font-bold text-ink text-base flex items-center gap-2">
+            <Edit2 className="w-4 h-4 text-orange-500" />Edit Vehicle
+          </h3>
+          <button type="button" onClick={onClose} aria-label="Close"><X className="w-4 h-4 text-ink-muted hover:text-ink" /></button>
+        </div>
+        <div className="space-y-3">
+          <div>
+            <label htmlFor="ev-plate" className="block text-xs font-medium text-ink-secondary mb-1">License Plate</label>
+            <input id="ev-plate" className="input" value={form.plate_number} onChange={e => setForm(f => ({ ...f, plate_number: e.target.value }))} placeholder="RAA 000 A" required />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="ev-make" className="block text-xs font-medium text-ink-secondary mb-1">Make</label>
+              <input id="ev-make" className="input" value={form.make} onChange={e => setForm(f => ({ ...f, make: e.target.value }))} placeholder="Toyota" />
+            </div>
+            <div>
+              <label htmlFor="ev-model" className="block text-xs font-medium text-ink-secondary mb-1">Model</label>
+              <input id="ev-model" className="input" value={form.model} onChange={e => setForm(f => ({ ...f, model: e.target.value }))} placeholder="Hilux" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="ev-year" className="block text-xs font-medium text-ink-secondary mb-1">Year</label>
+              <input id="ev-year" className="input" type="number" value={form.year} onChange={e => setForm(f => ({ ...f, year: Number(e.target.value) }))} />
+            </div>
+            <div>
+              <label htmlFor="ev-status" className="block text-xs font-medium text-ink-secondary mb-1">Status</label>
+              <select id="ev-status" className="input" value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
+                {VEHICLE_STATUSES.map(s => (
+                  <option key={s} value={s}>
+                    {s === 'on_trip' ? 'On Trip' : s.charAt(0).toUpperCase() + s.slice(1)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+        <div className="flex gap-2 mt-5">
+          <button type="button" onClick={onClose} className="btn-ghost flex-1">Cancel</button>
+          <button type="button" onClick={() => mutation.mutate()} disabled={!form.plate_number || mutation.isPending} className="btn-primary flex-1 gap-2">
+            {mutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}Save Changes
           </button>
         </div>
       </div>
@@ -202,6 +273,7 @@ export default function FleetPage() {
   const [search, setSearch] = useState('')
   const [showAdd, setShowAdd] = useState(false)
   const [showFuel, setShowFuel] = useState(false)
+  const [editVehicle, setEditVehicle] = useState<Vehicle | null>(null)
   const [livePositions, setLivePositions] = useState<Record<string, LivePosition>>({})
 
   const { data: vehicleData, isLoading, refetch } = useQuery({
@@ -311,7 +383,7 @@ export default function FleetPage() {
             <div className="card p-5">
               <div className="mb-4">
                 <h3 className="text-sm font-bold text-ink">Fleet Status Overview</h3>
-                <p className="text-xs text-ink-muted">Active · Idle · Maintenance · Retired</p>
+                <p className="text-xs text-ink-muted">Available · On Trip · Maintenance · Inactive</p>
               </div>
               <div className="flex items-center gap-4">
                 <ResponsiveContainer width="50%" height={140}>
@@ -475,7 +547,7 @@ export default function FleetPage() {
                       <td>
                         <div className="flex items-center justify-end gap-1.5">
                           <ActionBtn variant="view" label="View" icon={Eye} onClick={() => toast('Vehicle detail coming soon')} />
-                          <ActionBtn variant="edit" label="Edit" icon={Edit2} onClick={() => toast('Edit vehicle coming soon')} />
+                          <ActionBtn variant="edit" label="Edit" icon={Edit2} onClick={() => setEditVehicle(v)} />
                           <ActionBtn variant="delete" label="Delete" icon={Trash2} onClick={() => toast.error('Delete not yet supported')} />
                         </div>
                       </td>
@@ -618,6 +690,7 @@ export default function FleetPage() {
 
       {showAdd && <AddVehicleModal onClose={() => setShowAdd(false)} />}
       {showFuel && <LogFuelModal vehicles={vehicles} onClose={() => setShowFuel(false)} />}
+      {editVehicle && <EditVehicleModal vehicle={editVehicle} onClose={() => setEditVehicle(null)} />}
     </div>
   )
 }

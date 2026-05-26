@@ -120,6 +120,7 @@ defmodule SyncFlow.Web.Controllers.InvoiceController do
       org_id: conn.assigns.current_org_id,
       customer_id: params["customer_id"] || UUID.uuid4(),
       customer_name: params["customer_name"],
+      customer_email: params["customer_email"],
       currency: params["currency"] || "RWF",
       due_date: params["due_date"],
       lines: params["lines"] || [],

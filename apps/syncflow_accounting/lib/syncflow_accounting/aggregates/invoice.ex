@@ -27,6 +27,7 @@ defmodule SyncFlow.Accounting.Aggregates.Invoice do
       org_id: cmd.org_id,
       customer_id: cmd.customer_id,
       customer_name: cmd.customer_name,
+      customer_email: cmd.customer_email,
       currency: cmd.currency || "RWF",
       due_date: cmd.due_date,
       lines: cmd.lines || [],

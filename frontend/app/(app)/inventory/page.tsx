@@ -437,6 +437,64 @@ function AdjustModal({ item, onClose }: { item: StockItem; onClose: () => void }
   )
 }
 
+/* ── Add Warehouse Modal ────────────────────────────────────── */
+function AddWarehouseModal({ onClose }: { onClose: () => void }) {
+  const qc = useQueryClient()
+  const [form, setForm] = useState({ name: '', code: '', city: '', country: 'Rwanda' })
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      const payload: Record<string, unknown> = { name: form.name, code: form.code }
+      if (form.city || form.country) {
+        payload.address = { city: form.city, country: form.country }
+      }
+      await inventoryApi.createWarehouse(payload)
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['warehouses'] }); toast.success('Warehouse created'); onClose() },
+    onError: () => toast.error('Failed to create warehouse'),
+  })
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
+            <Plus className="w-4 h-4 text-blue-500" />Add Warehouse
+          </h3>
+          <button type="button" onClick={onClose} aria-label="Close" className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+        </div>
+        <div className="space-y-3">
+          <div>
+            <label htmlFor="aw-name" className="block text-xs font-medium text-slate-600 mb-1">Warehouse Name</label>
+            <input id="aw-name" className="input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Main Warehouse" required />
+          </div>
+          <div>
+            <label htmlFor="aw-code" className="block text-xs font-medium text-slate-600 mb-1">Code <span className="text-red-400">*</span></label>
+            <input id="aw-code" className="input font-mono" value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value }))} placeholder="WH-KGL-01" required />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="aw-city" className="block text-xs font-medium text-slate-600 mb-1">City</label>
+              <input id="aw-city" className="input" value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} placeholder="Kigali" />
+            </div>
+            <div>
+              <label htmlFor="aw-country" className="block text-xs font-medium text-slate-600 mb-1">Country</label>
+              <input id="aw-country" className="input" value={form.country} onChange={e => setForm(f => ({ ...f, country: e.target.value }))} placeholder="Rwanda" />
+            </div>
+          </div>
+        </div>
+        <div className="flex gap-2 mt-5">
+          <button type="button" onClick={onClose} className="flex-1 py-2 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">Cancel</button>
+          <button type="button" onClick={() => mutation.mutate()} disabled={!form.name || !form.code || mutation.isPending}
+            className="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold transition-colors disabled:opacity-50">
+            {mutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}Create Warehouse
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 /* ── Add Item Modal ─────────────────────────────────────────── */
 function AddItemModal({ warehouses, onClose }: { warehouses: WarehouseType[]; onClose: () => void }) {
   const qc = useQueryClient()
@@ -518,6 +576,7 @@ export default function InventoryPage() {
   const [editWarehouse, setEditWarehouse]   = useState<WarehouseType | null>(null)
   const [deleteWarehouse, setDeleteWarehouse] = useState<WarehouseType | null>(null)
   const [showAdd, setShowAdd] = useState(false)
+  const [showAddWarehouse, setShowAddWarehouse] = useState(false)
 
   const qc = useQueryClient()
 
@@ -700,6 +759,11 @@ export default function InventoryPage() {
                 <Plus className="w-4 h-4" />Add Item
               </button>
             </div>
+          )}
+          {tab === 'warehouses' && (
+            <button type="button" onClick={() => setShowAddWarehouse(true)} className="btn-primary gap-2">
+              <Plus className="w-4 h-4" />Add Warehouse
+            </button>
           )}
         </div>
 
@@ -894,6 +958,7 @@ export default function InventoryPage() {
         />
       )}
       {showAdd && <AddItemModal warehouses={warehouses as WarehouseType[]} onClose={() => setShowAdd(false)} />}
+      {showAddWarehouse && <AddWarehouseModal onClose={() => setShowAddWarehouse(false)} />}
     </div>
   )
 }
